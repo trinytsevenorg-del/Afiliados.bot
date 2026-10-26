@@ -277,7 +277,14 @@ export class WhatsApp {
     if (this.estado === "conectado") throw new IntegracaoErro("resposta_invalida", "Já está conectado. Desconecte antes de trocar de número.", 400);
     this.parando = true;
     this.sock?.end(undefined);
-    await a.apagarSessao();
+    try {
+      await a.apagarSessao();
+      this.banco = "ok";
+    } catch (e) {
+      this.banco = "erro";
+      this.ultimoErro = `Não conectou no banco (DATABASE_URL): ${(e as Error)?.message ?? e}`;
+      throw new IntegracaoErro("indisponivel", this.ultimoErro, 503);
+    }
     const tempo = new Promise<null>((r) => setTimeout(() => r(null), 30_000).unref());
     const codigo = await Promise.race([this.abrir(num), tempo]);
     if (!codigo) throw new IntegracaoErro("indisponivel", this.ultimoErro ?? "O WhatsApp não respondeu. Tente de novo em 1 minuto.", 504);

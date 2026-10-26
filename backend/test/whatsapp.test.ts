@@ -50,6 +50,8 @@ describe("WhatsApp automático (número próprio)", () => {
     await expect(wa.iniciar()).resolves.toBeUndefined();
     expect(wa.banco).toBe("erro");
     expect(wa.status().detalhe).toContain("password authentication failed");
+    armazem.apagarSessao = async () => { throw new Error("password authentication failed"); };
+    await expect(wa.conectar("5521999998888")).rejects.toMatchObject({ httpStatus: 503, message: expect.stringContaining("password authentication failed") });
   });
 
   it("arruma o DATABASE_URL colado do Supabase", () => {
