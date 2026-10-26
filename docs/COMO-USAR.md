@@ -16,7 +16,7 @@
 5. **Ajustes → Canais.** Cadastre onde você divulga:
    - "WhatsApp (compartilhar)": para seus grupos.
    - "Telegram (automático)": `@seucanal` com o bot como administrador.
-6. **Nichos:** já vêm 8. Toque num nicho para mudar nome, ícone, tom do texto e canal padrão.
+6. **Nichos:** já vêm 8. Toque num nicho para mudar nome, ícone, tom do texto e os canais (pode marcar vários: Telegram e grupos do WhatsApp).
 
 ## Parte 2 · Cadastrar produtos
 
@@ -27,7 +27,7 @@
 3. Em **Colar os links**: para cada produto, copie o link na loja (GANHOS → copiar) e toque em **📋 Colar link**. A oferta vai pronta para a fila, no canal do nicho.
 4. Na **Fila**, toque em **🚀 Publicar todos no Telegram**: um a cada 15 minutos (mude em Ajustes).
 
-**Um canal por nicho:** crie os canais no Telegram, ponha o **mesmo bot** como admin em todos, cadastre em Ajustes → Canais e escolha o canal padrão em cada nicho.
+**Um canal por nicho:** crie os canais no Telegram, ponha o **mesmo bot** como admin em todos, cadastre em Ajustes → Canais e marque os canais de cada nicho. A oferta sai em todos os marcados; em cada canal, uma a cada intervalo.
 
 
 ### Jeito mais rápido: pelo print (precisa da IA ligada)

@@ -300,14 +300,19 @@ class Repositorio(
         val atualizado = p.copy(linkAfiliado = v.url, linkAfiliadoOrigem = "manual", linkOriginal = p.linkOriginal.ifBlank { v.url },
             marketplace = if (p.marketplace == Marketplace.OUTRO) v.marketplace else p.marketplace, atualizadoEm = agora())
         dao.atualizar(atualizado)
-        val canalId = atualizado.nichoId?.let { dao.nicho(it) }?.canalId
+        // Um item na fila para cada canal do nicho (Telegram e grupos de WhatsApp).
+        val canais = atualizado.nichoId?.let { dao.nicho(it) }?.canais.orEmpty().ifEmpty { listOf(null) }
         val titulo = dao.textosLista().filter { it.produtoId == p.id }.maxByOrNull { it.criadoEm }?.titulo
-        val r = adicionarAFila(atualizado, textoModelo(atualizado, titulo), "", canalId)
-        if (r is ResultadoFila.Criado) {
-            val item = dao.itemAgora(r.id)!!
-            if (Fila.bloqueios(item.texto, item.link, situacaoPreco(atualizado), false).isEmpty()) dao.mudarEstado(item, EstadoFila.PRONTO, "Pronto (lote)")
+        val texto = textoModelo(atualizado, titulo)
+        val resultados = canais.map { canalId ->
+            adicionarAFila(atualizado, texto, "", canalId).also { r ->
+                if (r is ResultadoFila.Criado) {
+                    val item = dao.itemAgora(r.id)!!
+                    if (Fila.bloqueios(item.texto, item.link, situacaoPreco(atualizado), false).isEmpty()) dao.mudarEstado(item, EstadoFila.PRONTO, "Pronto (lote)")
+                }
+            }
         }
-        return r
+        return resultados.firstOrNull { it is ResultadoFila.Criado } ?: resultados.first()
     }
 
     /** Itens prontos que vão sozinhos (Telegram), na ordem da fila. */
@@ -317,11 +322,18 @@ class Repositorio(
             .sortedWith(compareBy({ it.ordem }, { it.criadoEm }))
     }
 
-    /** Agenda em sequência: o primeiro agora, os outros a cada [intervaloMin] minutos. */
+    /**
+     * Agenda em sequência: em cada canal, uma oferta a cada [intervaloMin] minutos.
+     * Canais diferentes andam juntos, com 1 minuto de folga entre eles para não sair tudo no mesmo instante.
+     */
     suspend fun agendarEmSequencia(itens: List<ItemFila>, intervaloMin: Int): List<ItemFila> {
         val inicio = agora() + 60_000
-        val feitos = itens.mapIndexed { i, item ->
-            val comHora = item.copy(planejadoPara = inicio + i * intervaloMin * 60_000L).also { dao.atualizar(it) }
+        val ordemCanal = itens.map { it.canalId }.distinct()
+        val posicao = mutableMapOf<Long?, Int>()
+        val feitos = itens.map { item ->
+            val n = posicao.merge(item.canalId, 1, Int::plus)!! - 1
+            val hora = inicio + n * intervaloMin * 60_000L + ordemCanal.indexOf(item.canalId) * 60_000L
+            val comHora = item.copy(planejadoPara = hora).also { dao.atualizar(it) }
             dao.mudarEstado(comHora, EstadoFila.AGENDADO, "Agendado em lote")
         }
         if (feitos.isNotEmpty()) registrar("fila", "Agendou ${feitos.size} ofertas, uma a cada $intervaloMin min")

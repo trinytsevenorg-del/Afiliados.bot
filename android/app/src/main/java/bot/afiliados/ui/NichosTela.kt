@@ -1,5 +1,11 @@
 package bot.afiliados.ui
 
+import androidx.compose.foundation.layout.FlowRow
+
+import bot.afiliados.data.comCanais
+
+import bot.afiliados.data.canais
+
 import android.database.sqlite.SQLiteConstraintException
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,7 +74,7 @@ fun NichosTela(app: AfiliadosApp, nav: NavHostController) {
                         Text(n.icone, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(end = 12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(n.nome, style = MaterialTheme.typography.titleMedium)
-                            Text("${total[n.id] ?: 0} produtos · $pend ofertas pendentes" + (canais.firstOrNull { it.id == n.canalId }?.let { " · ${it.nome}" } ?: ""), style = MaterialTheme.typography.bodySmall)
+                            Text("${total[n.id] ?: 0} produtos · $pend ofertas pendentes" + (n.canais.mapNotNull { id -> canais.firstOrNull { it.id == id }?.nome }.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = " · ") ?: ""), style = MaterialTheme.typography.bodySmall)
                             if (n.descricao.isNotBlank()) Text(n.descricao, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -97,13 +103,14 @@ fun NichosTela(app: AfiliadosApp, nav: NavHostController) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun EditorNicho(n: Nicho, canais: List<Canal>, aoFechar: () -> Unit, aoExcluir: (() -> Unit)?, aoSalvar: (Nicho) -> Unit) {
     var nome by remember { mutableStateOf(n.nome) }
     var icone by remember { mutableStateOf(n.icone) }
     var descricao by remember { mutableStateOf(n.descricao) }
     var pref by remember { mutableStateOf(n.preferenciasTexto) }
-    var canalId by remember { mutableStateOf(n.canalId) }
+    var escolhidos by remember { mutableStateOf(n.canais) }
     AlertDialog(
         onDismissRequest = aoFechar,
         title = { Text(if (n.id == 0L) "Novo nicho" else "Editar nicho") },
@@ -113,10 +120,17 @@ private fun EditorNicho(n: Nicho, canais: List<Canal>, aoFechar: () -> Unit, aoE
                 Campo(icone, { icone = it.take(4) }, "Ícone (emoji)")
                 Campo(descricao, { descricao = it }, "Descrição (opcional)")
                 Campo(pref, { pref = it.take(400) }, "Preferências de texto", linhas = 2, ajuda = "Ex.: tom descontraído, sem gírias")
-                Escolha("Canal padrão", listOf(null) + canais, canais.firstOrNull { it.id == canalId }, { it?.nome ?: "Nenhum" }, { canalId = it?.id })
+                Text("Canais do nicho (a oferta sai em todos os marcados)", style = MaterialTheme.typography.labelLarge)
+                if (canais.isEmpty()) Text("Crie canais em Ajustes.", style = MaterialTheme.typography.bodySmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    canais.forEach { c ->
+                        val marcado = c.id in escolhidos
+                        Chip(marcado, { escolhidos = if (marcado) escolhidos - c.id else escolhidos + c.id }, label = { Text(c.nome) })
+                    }
+                }
             }
         },
-        confirmButton = { TextButton(enabled = nome.isNotBlank(), onClick = { aoSalvar(n.copy(nome = nome.trim(), icone = icone.ifBlank { "🏷️" }, descricao = descricao.trim(), preferenciasTexto = pref.trim(), canalId = canalId)) }) { Text("Salvar") } },
+        confirmButton = { TextButton(enabled = nome.isNotBlank(), onClick = { aoSalvar(n.copy(nome = nome.trim(), icone = icone.ifBlank { "🏷️" }, descricao = descricao.trim(), preferenciasTexto = pref.trim()).comCanais(escolhidos)) }) { Text("Salvar") } },
         dismissButton = {
             Row {
                 aoExcluir?.let { TextButton(onClick = it) { Text("Excluir", color = MaterialTheme.colorScheme.error) } }

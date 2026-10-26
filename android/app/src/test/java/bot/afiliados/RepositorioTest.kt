@@ -5,6 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import bot.afiliados.data.BancoAfiliados
 import bot.afiliados.data.Backend
 import bot.afiliados.data.Canal
+import bot.afiliados.data.canais
+import bot.afiliados.data.comCanais
 import bot.afiliados.data.FalhaBackend
 import bot.afiliados.data.Preferencias
 import bot.afiliados.data.Produto
@@ -151,6 +153,25 @@ class RepositorioTest {
         }
         val ag = repo.agendarEmSequencia(itens, 15)
         assertEquals(listOf(0L, 15L, 30L), ag.map { (it.planejadoPara!! - ag[0].planejadoPara!!) / 60_000 })
+    }
+
+    @Test fun nichoComVariosCanaisGeraUmItemPorCanalEAgendaPorCanal() = runBlocking {
+        val dao = banco.dao()
+        val tg = dao.inserir(Canal(nome = "Tg", tipo = TipoCanal.TELEGRAM, destino = "@meucanal"))
+        val wa = dao.inserir(Canal(nome = "Zap", tipo = TipoCanal.WHATSAPP_AUTO, destino = "1@g.us"))
+        val nicho = dao.inserir(bot.afiliados.data.Nicho(nome = "Casa"))
+        dao.atualizar(dao.nicho(nicho)!!.comCanais(listOf(tg, wa)))
+        assertEquals(listOf(tg, wa), dao.nicho(nicho)!!.canais)
+        (1..2).forEach { i ->
+            val pid = repo.salvarNovo(produto(chave = "c$i").copy(nichoId = nicho, linkAfiliado = null), null)
+            assertTrue(repo.liberarComLink(dao.produtoAgora(pid)!!, "https://meli.la/x$i") is Repositorio.ResultadoFila.Criado)
+        }
+        val prontos = repo.prontosAutomaticos()
+        assertEquals(listOf(tg, wa, tg, wa), prontos.map { it.canalId })
+        // Em cada canal: 0 e 15 min. O segundo canal anda 1 min depois do primeiro.
+        val ag = repo.agendarEmSequencia(prontos, 15).map { it.canalId to it.planejadoPara!! }
+        val base = ag.minOf { it.second }
+        assertEquals(listOf(tg to 0L, wa to 1L, tg to 15L, wa to 16L), ag.map { it.first to (it.second - base) / 60_000 })
     }
 
     @Test fun precoVencidoParaAPublicacaoSemChamarARede() = runBlocking {

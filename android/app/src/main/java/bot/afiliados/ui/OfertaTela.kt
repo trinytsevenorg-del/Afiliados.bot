@@ -1,5 +1,7 @@
 package bot.afiliados.ui
 
+import bot.afiliados.data.canais
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -67,7 +69,8 @@ fun OfertaTela(app: AfiliadosApp, nav: NavHostController, produtoInicial: Long?)
     var versao by rememberSaveable { mutableStateOf(Versao.MODELO) }
     var texto by rememberSaveable { mutableStateOf("") }
     var editado by rememberSaveable { mutableStateOf(false) }
-    var canalId by rememberSaveable { mutableStateOf<Long?>(null) }
+    // Canais marcados (vazio = só compartilhar). null = ainda não escolheu: usa os do nicho.
+    var marcados by rememberSaveable { mutableStateOf<List<Long>?>(null) }
     var gerando by remember { mutableStateOf(false) }
     var avisos by remember { mutableStateOf<List<String>>(emptyList()) }
     var erro by remember { mutableStateOf<String?>(null) }
@@ -81,12 +84,13 @@ fun OfertaTela(app: AfiliadosApp, nav: NavHostController, produtoInicial: Long?)
         else if (atual != null) texto = versao.de(atual)
         avisos = atual?.avisos?.lines()?.filter(String::isNotBlank).orEmpty()
     }
-    val canal = canais.firstOrNull { it.id == canalId }
     val nichos by repo.dao.nichos().collectAsStateWithLifecycle(emptyList())
-    // Canal padrão do nicho, se houver.
+    // Canais do nicho, se houver.
     LaunchedEffect(produto?.id, nichos) {
-        if (canalId == null) canalId = nichos.firstOrNull { it.id == produto?.nichoId }?.canalId
+        if (marcados == null && nichos.isNotEmpty()) marcados = nichos.firstOrNull { it.id == produto?.nichoId }?.canais.orEmpty()
     }
+    val escolhidos = marcados.orEmpty()
+    val canal = canais.firstOrNull { it.id == escolhidos.firstOrNull() }
 
 
     fun gerar() {
@@ -117,7 +121,15 @@ fun OfertaTela(app: AfiliadosApp, nav: NavHostController, produtoInicial: Long?)
             if (produto != null) {
                 if (produto.linkAfiliado == null) item { Aviso("Este produto não tem link de afiliado. Adicione antes de publicar.", erro = true) }
                 item {
-                    Escolha("Canal", listOf(null) + canais.filter { it.ativo }, canal, { c -> c?.let { "${it.nome} · ${it.tipo.rotulo}" } ?: "Só compartilhar (escolho na hora)" }, { canalId = it?.id })
+                    Text("Canais (marque um ou vários)", style = MaterialTheme.typography.labelLarge)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        canais.filter { it.ativo }.forEach { c ->
+                            val marcado = c.id in escolhidos
+                            Chip(marcado, { marcados = if (marcado) escolhidos - c.id else escolhidos + c.id }, label = { Text(c.nome) })
+                        }
+                    }
+                    Text(if (escolhidos.isEmpty()) "Nenhum marcado: só compartilhar (você escolhe na hora)." else "Sai em ${escolhidos.size} canal(is), um item na fila para cada.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -146,10 +158,21 @@ fun OfertaTela(app: AfiliadosApp, nav: NavHostController, produtoInicial: Long?)
                         OutlinedButton(enabled = texto.isNotBlank(), onClick = { escopo.launch { textoId = repo.salvarTextoManual(produto.id, texto); editado = false; ctx.avisar("Texto salvo como nova versão") } }) { Text("Salvar como versão") }
                         Button(enabled = texto.isNotBlank() && produto.linkAfiliado != null, onClick = {
                             escopo.launch {
-                                when (val r = repo.adicionarAFila(produto, texto, if (texto.contains(Mensagem.LINK)) "" else atual?.hashtags.orEmpty(), canalId)) {
-                                    is Repositorio.ResultadoFila.Criado -> { nav.popBackStack(); nav.irPara(Rotas.item(r.id)) }
-                                    is Repositorio.ResultadoFila.JaNaFila -> { ctx.avisar("Esse produto já está na fila deste canal"); nav.irPara(Rotas.item(r.item.id)) }
-                                    is Repositorio.ResultadoFila.SemLink -> ctx.avisar(r.motivo)
+                                val tags = if (texto.contains(Mensagem.LINK)) "" else atual?.hashtags.orEmpty()
+                                val rs = escolhidos.ifEmpty { listOf(null) }.map { repo.adicionarAFila(produto, texto, tags, it) }
+                                val criados = rs.filterIsInstance<Repositorio.ResultadoFila.Criado>()
+                                val repetidos = rs.count { it is Repositorio.ResultadoFila.JaNaFila }
+                                when {
+                                    rs.size == 1 -> when (val r = rs[0]) {
+                                        is Repositorio.ResultadoFila.Criado -> { nav.popBackStack(); nav.irPara(Rotas.item(r.id)) }
+                                        is Repositorio.ResultadoFila.JaNaFila -> { ctx.avisar("Esse produto já está na fila deste canal"); nav.irPara(Rotas.item(r.item.id)) }
+                                        is Repositorio.ResultadoFila.SemLink -> ctx.avisar(r.motivo)
+                                    }
+                                    criados.isEmpty() && repetidos == 0 -> ctx.avisar((rs[0] as? Repositorio.ResultadoFila.SemLink)?.motivo ?: "Não entrou na fila")
+                                    else -> {
+                                        ctx.avisar("${criados.size} na fila" + if (repetidos > 0) " · $repetidos já estavam" else "")
+                                        nav.popBackStack(); nav.irPara("fila")
+                                    }
                                 }
                             }
                         }) { Text("Adicionar à fila") }

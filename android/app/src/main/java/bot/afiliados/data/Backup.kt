@@ -57,7 +57,7 @@ class Backup(private val dao: AfiliadosDao) {
         var nichos = 0
         for (n in b.nichos) {
             val existente = dao.nichoPorNome(n.nome)
-            mapaNicho[n.id] = existente?.id ?: dao.inserir(n.copy(id = 0, canalId = null)).also { nichos++ }
+            mapaNicho[n.id] = existente?.id ?: dao.inserir(n.copy(id = 0, canalId = null, canaisExtras = "")).also { nichos++ }
         }
         val mapaCanal = mutableMapOf<Long, Long>()
         val canaisAtuais = dao.canaisLista()

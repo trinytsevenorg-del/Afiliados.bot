@@ -21,6 +21,8 @@ data class Nicho(
     val icone: String = "🏷️",
     val preferenciasTexto: String = "",
     val canalId: Long? = null,
+    /** Outros canais do nicho, além do principal (ids separados por vírgula). */
+    @androidx.room.ColumnInfo(defaultValue = "") val canaisExtras: String = "",
     val ordem: Int = 0,
     val criadoEm: Long = System.currentTimeMillis(),
 )
@@ -200,3 +202,9 @@ data class Atividade(
 /** Fotos que ainda existem no aparelho, na ordem (a primeira é a principal). */
 val Produto.fotos: List<java.io.File>
     get() = fotoLocal?.lines()?.filter { it.isNotBlank() }?.map { java.io.File(it) }?.filter { it.isFile }.orEmpty()
+
+/** Todos os canais do nicho: o principal primeiro, depois os extras, sem repetir. */
+val Nicho.canais: List<Long> get() = (listOfNotNull(canalId) + canaisExtras.split(',').mapNotNull { it.trim().toLongOrNull() }).distinct()
+
+/** Guarda a lista: o primeiro vira o canal principal, o resto vai em [Nicho.canaisExtras]. */
+fun Nicho.comCanais(ids: List<Long>): Nicho = ids.distinct().let { copy(canalId = it.firstOrNull(), canaisExtras = it.drop(1).joinToString(",")) }

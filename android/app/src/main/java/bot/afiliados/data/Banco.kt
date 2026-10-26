@@ -111,7 +111,7 @@ interface AfiliadosDao {
 
 @Database(
     entities = [Nicho::class, Produto::class, VerificacaoPreco::class, TextoPromocional::class, Canal::class, ItemFila::class, Tentativa::class, Comissao::class, Atividade::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class BancoAfiliados : RoomDatabase() {
@@ -138,6 +138,12 @@ abstract class BancoAfiliados : RoomDatabase() {
             }
         }
 
+        val MIGRACAO_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE nichos ADD COLUMN canaisExtras TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun criar(ctx: Context): BancoAfiliados =
             Room.databaseBuilder(ctx, BancoAfiliados::class.java, "afiliados.db")
                 .addCallback(object : Callback() {
@@ -150,7 +156,7 @@ abstract class BancoAfiliados : RoomDatabase() {
                         }
                     }
                 })
-                .addMigrations(MIGRACAO_1_2, MIGRACAO_2_3)
+                .addMigrations(MIGRACAO_1_2, MIGRACAO_2_3, MIGRACAO_3_4)
                 .build()
     }
 }
