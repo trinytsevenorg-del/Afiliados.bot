@@ -5,6 +5,11 @@ import { join } from "node:path";
 import { fetchRetry } from "../lib/http.js";
 import { IntegracaoErro, type StatusIntegracao } from "./types.js";
 
+export interface FotoEnvio {
+  tipo: string;
+  base64: string;
+}
+
 export interface Publicacao {
   chave: string;
   chatId: string;
@@ -69,7 +74,14 @@ export class Telegram {
    * Publica uma vez por chave. Se a mesma chave chegar de novo (reenvio após
    * queda de conexão), devolve a publicação anterior sem postar de novo.
    */
-  async publicar(p: { chave: string; chatId: string; texto: string; imagem?: string | null; foto?: { tipo: string; base64: string } | null }) {
+  async publicar(p: {
+    chave: string;
+    chatId: string;
+    texto: string;
+    imagem?: string | null;
+    foto?: FotoEnvio | null;
+    fotos?: FotoEnvio[] | null;
+  }) {
     await this.carregar();
     const anterior = this.enviados.get(p.chave);
     if (anterior) return { ...anterior, repetido: true };
@@ -77,13 +89,22 @@ export class Telegram {
     // Nunca cortar o texto: o link de afiliado fica no fim e se perderia.
     if (p.texto.length > 4096) throw new IntegracaoErro("resposta_invalida", "Texto maior que 4096 caracteres. Encurte antes de publicar.", 400);
     const cabe = p.texto.length <= 1024;
+    const fotos = [...(p.fotos ?? []), ...(p.foto ? [p.foto] : [])].slice(0, 10);
+    const arquivo = (f: FotoEnvio) => new Blob([Buffer.from(f.base64, "base64")], { type: f.tipo });
     let msg: Msg;
-    if (p.foto && cabe) {
-      // Foto do aparelho: vai como arquivo (multipart).
+    if (fotos.length > 1) {
+      // Álbum: o texto vai na legenda da primeira foto (ou em mensagem própria, se for longo).
+      const form = new FormData();
+      form.append("chat_id", p.chatId);
+      form.append("media", JSON.stringify(fotos.map((_, i) => ({ type: "photo", media: `attach://foto${i}`, ...(i === 0 && cabe ? { caption: p.texto } : {}) }))));
+      fotos.forEach((f, i) => form.append(`foto${i}`, arquivo(f), `foto${i}.jpg`));
+      const album = await this.api<Msg[]>("sendMediaGroup", form);
+      msg = cabe ? album[0]! : await this.api<Msg>("sendMessage", { chat_id: p.chatId, text: p.texto });
+    } else if (fotos.length === 1 && cabe) {
       const form = new FormData();
       form.append("chat_id", p.chatId);
       form.append("caption", p.texto);
-      form.append("photo", new Blob([Buffer.from(p.foto.base64, "base64")], { type: p.foto.tipo }), "produto.jpg");
+      form.append("photo", arquivo(fotos[0]!), "produto.jpg");
       msg = await this.api<Msg>("sendPhoto", form);
     } else if (p.imagem && cabe) {
       msg = await this.api<Msg>("sendPhoto", { chat_id: p.chatId, photo: p.imagem, caption: p.texto });

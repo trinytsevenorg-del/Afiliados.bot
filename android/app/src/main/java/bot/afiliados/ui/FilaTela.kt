@@ -50,6 +50,7 @@ import androidx.work.ExistingWorkPolicy
 import bot.afiliados.AfiliadosApp
 import bot.afiliados.data.ItemFila
 import bot.afiliados.data.Repositorio
+import bot.afiliados.data.fotos
 import bot.afiliados.domain.EstadoFila
 import bot.afiliados.domain.Fila
 import bot.afiliados.domain.Mensagem
@@ -207,7 +208,7 @@ fun ItemFilaTela(app: AfiliadosApp, nav: NavHostController, id: Long) {
                                 }
                             }) { Text("Publicar agora") }
                             else Button(enabled = bloqueios.isEmpty(), onClick = {
-                                ctx.compartilhar(mensagem, if (canal?.tipo == TipoCanal.WHATSAPP_COMPARTILHAR) "com.whatsapp" else null, produto?.fotoLocal?.let { java.io.File(it) })
+                                ctx.compartilhar(mensagem, if (canal?.tipo == TipoCanal.WHATSAPP_COMPARTILHAR) "com.whatsapp" else null, produto?.fotos.orEmpty())
                                 dialogo = "confirmar_envio"
                             }) { Text(if (canal?.tipo == TipoCanal.WHATSAPP_COMPARTILHAR) "Abrir no WhatsApp" else "Compartilhar") }
                             OutlinedButton(onClick = { dialogo = "agendar" }) { Text(if (item.estado == EstadoFila.AGENDADO) "Mudar horário" else "Agendar") }

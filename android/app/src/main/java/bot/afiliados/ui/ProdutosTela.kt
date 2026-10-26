@@ -46,6 +46,7 @@ import androidx.navigation.NavHostController
 import bot.afiliados.AfiliadosApp
 import bot.afiliados.data.Nicho
 import bot.afiliados.data.Produto
+import bot.afiliados.data.fotos
 import bot.afiliados.domain.Marketplace
 import bot.afiliados.domain.Precos
 import coil.compose.AsyncImage
@@ -122,7 +123,7 @@ fun ProdutosTela(app: AfiliadosApp, nav: NavHostController) {
 
 @Composable
 private fun Imagem(p: Produto, modifier: Modifier) {
-    val modelo: Any? = p.fotoLocal?.let { java.io.File(it) }?.takeIf { it.isFile } ?: p.imagemUrl?.takeIf { it.startsWith("https://") }
+    val modelo: Any? = p.fotos.firstOrNull() ?: p.imagemUrl?.takeIf { it.startsWith("https://") }
     if (modelo != null) {
         AsyncImage(model = modelo, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier.clip(RoundedCornerShape(8.dp)))
     } else {

@@ -104,6 +104,23 @@ describe("Telegram", () => {
     expect((corpo.get("photo") as Blob).size).toBe(3000);
   });
 
+  it("várias fotos viram álbum com o texto na primeira", async () => {
+    const { f, chamadas } = fakeFetch(() => json({ ok: true, result: [{ message_id: 20, chat: { id: -1 } }, { message_id: 21, chat: { id: -1 } }] }));
+    const tg = new Telegram({ token: "123:abc", dataDir: cfgTeste().DATA_DIR }, f);
+    const a = await app({}, tg);
+    const foto = { tipo: "image/jpeg", base64: Buffer.alloc(500, 1).toString("base64") };
+    const r = await a.inject({ method: "POST", url: "/api/publish/telegram", headers: auth, payload: { chave: "fila-5-abcdef", chatId: "@meucanal", texto: "Oferta", fotos: Array(10).fill(foto) } });
+    expect(r.json()).toMatchObject({ messageId: 20 });
+    expect(chamadas[0]!.url).toMatch(/sendMediaGroup$/);
+    const corpo = chamadas[0]!.init.body as FormData;
+    const media = JSON.parse(String(corpo.get("media")));
+    expect(media).toHaveLength(10);
+    expect(media[0].caption).toBe("Oferta");
+    expect(media[1].caption).toBeUndefined();
+    const onze = await a.inject({ method: "POST", url: "/api/publish/telegram", headers: auth, payload: { chave: "fila-6-abcdef", chatId: "@meucanal", texto: "x", fotos: Array(11).fill(foto) } });
+    expect(onze.statusCode).toBe(400);
+  });
+
   it("falha do Telegram não vira 'publicado'", async () => {
     const { f } = fakeFetch(() => json({ ok: false, description: "Forbidden: bot is not a member" }, 403));
     const tg = new Telegram({ token: "123:abc", dataDir: cfgTeste().DATA_DIR }, f);

@@ -43,5 +43,5 @@ Uma consulta que falha não apaga o preço salvo e também não renova a validad
 
 ## Testes
 
-- Backend: `npm test`, com 41 testes (links e redirecionamentos, assinatura da Shopee, erros e acesso, renovação do token do ML, conferência dos textos da IA, limite diário, token obrigatório, corpo grande e Telegram sem duplicar, inclusive depois de reiniciar).
-- Android: `./gradlew :app:testDebugUnitTest`, com 40 testes (regras, cliente HTTPS, backup, repositório com Room real, fluxo de publicação e abertura das telas com Robolectric).
+- Backend: `npm test`, com 42 testes (links e redirecionamentos, assinatura da Shopee, erros e acesso, renovação do token do ML, conferência dos textos da IA, limite diário, token obrigatório, corpo grande e Telegram sem duplicar, inclusive depois de reiniciar).
+- Android: `./gradlew :app:testDebugUnitTest`, com 41 testes (regras, cliente HTTPS, backup, repositório com Room real, fluxo de publicação e abertura das telas com Robolectric).

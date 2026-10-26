@@ -284,7 +284,7 @@ class Repositorio(
         val tentativa = dao.inserir(Tentativa(itemId = item.id, inicio = agora()))
         val (novo, detalhe, idExt) = try {
             val r = backend.publicarTelegram(PedidoTelegram(chave = item.chave, chatId = canal.destino, texto = bot.afiliados.domain.Mensagem.montar(item.texto, item.link, item.hashtags.split(' ').filter { it.isNotBlank() }), imagem = produto.imagemUrl,
-                foto = produto.fotoLocal?.let { Imagens.paraEnvio(it) }))
+                fotos = produto.fotos.take(10).mapNotNull { Imagens.paraEnvio(it.path) }.ifEmpty { null }))
             Triple(EstadoFila.PUBLICADO_CONFIRMADO, "Telegram confirmou a mensagem ${r.messageId}" + if (r.repetido) " (já tinha sido enviada antes)" else "", r.messageId.toString())
         } catch (e: FalhaBackend.SemResposta) {
             Triple(EstadoFila.ENVIO_NAO_CONFIRMADO, "Sem resposta. Pode ter sido enviada; tentar de novo não duplica.", null)

@@ -75,7 +75,7 @@ data class Textos(
 )
 @Serializable data class RespostaTexto(val textos: Textos, val avisos: List<String> = emptyList(), val modelo: String = "", val restantesHoje: Int? = null)
 
-@Serializable data class PedidoTelegram(val chave: String, val chatId: String, val texto: String, val imagem: String? = null, val foto: ImagemPrint? = null)
+@Serializable data class PedidoTelegram(val chave: String, val chatId: String, val texto: String, val imagem: String? = null, val fotos: List<ImagemPrint>? = null)
 @Serializable data class RespostaTelegram(val chatId: String, val messageId: Long, val publicadoEm: String, val repetido: Boolean = false)
 @Serializable data class DestinoTelegram(val id: String, val titulo: String? = null, val tipo: String)
 

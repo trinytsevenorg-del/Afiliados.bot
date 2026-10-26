@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import bot.afiliados.AfiliadosApp
 import bot.afiliados.data.Repositorio
+import bot.afiliados.data.fotos
 import bot.afiliados.domain.Precos
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
@@ -69,7 +70,7 @@ fun ProdutoDetalheTela(app: AfiliadosApp, nav: NavHostController, id: Long) {
         }, actions = { IconButton(onClick = { nav.irPara(Rotas.editar(id)) }) { Icon(Icons.Outlined.Edit, "Editar") } })
     }) { pad ->
         LazyColumn(Modifier.padding(pad), contentPadding = espaco, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            (produto.fotoLocal?.let { java.io.File(it) }?.takeIf { it.isFile } ?: produto.imagemUrl?.takeIf { it.startsWith("https://") })?.let { url ->
+            (produto.fotos.firstOrNull() ?: produto.imagemUrl?.takeIf { it.startsWith("https://") })?.let { url ->
                 item { AsyncImage(url, null, Modifier.fillMaxWidth().heightIn(max = 260.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Fit) }
             }
             item {

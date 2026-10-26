@@ -51,7 +51,7 @@ data class Produto(
     /** "manual" ou "shopee_api". */
     val comissaoOrigem: String? = null,
     val imagemUrl: String? = null,
-    /** Foto do produto guardada no aparelho (recortada do print ou escolhida da galeria). */
+    /** Até 10 fotos guardadas no aparelho, uma por linha. A primeira é a principal. */
     val fotoLocal: String? = null,
     val descricaoOriginal: String = "",
     /** Fatos do produto, um por linha. A IA só usa isso. */
@@ -194,3 +194,7 @@ data class Atividade(
     val tipo: String,
     val texto: String,
 )
+
+/** Fotos que ainda existem no aparelho, na ordem (a primeira é a principal). */
+val Produto.fotos: List<java.io.File>
+    get() = fotoLocal?.lines()?.filter { it.isNotBlank() }?.map { java.io.File(it) }?.filter { it.isFile }.orEmpty()

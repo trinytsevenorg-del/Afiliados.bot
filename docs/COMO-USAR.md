@@ -26,7 +26,7 @@
 2. Na galeria, toque em **Compartilhar → Afiliados.bot**. Ou, no app: **Novo produto → 📷 Preencher pelo print** e escolha até 10 imagens.
 3. A IA preenche nome, preço, preço riscado, % de ganho e características. **Só o que está escrito no print.** O que não aparece fica vazio.
 4. **Link de afiliado:** no app da loja, toque em **GANHOS** → copiar link. No Afiliados.bot, toque em **📋 Colar link copiado**.
-5. **Foto:** a IA acha a foto do produto no print e o app recorta sozinho. Se não gostar, toque em **Trocar foto** e escolha outra da galeria.
+5. **Fotos (até 10):** a IA acha a foto do produto no print e o app recorta sozinho como **principal**. Toque em **Adicionar fotos da galeria** para pôr mais. Toque numa miniatura para torná-la a principal, ou em **Tirar** para remover.
 6. Escolha o **nicho**, confira e salve.
 7. Se você não mexer no preço lido, ele já fica como **"Confirmado por você"**. Assim não precisa confirmar de novo para publicar.
 
@@ -61,8 +61,8 @@ Na **Fila**, toque no item para revisar.
    - "Verificar preço agora" (pela API), ou
    - "Confirmar à mão": você abre a loja, vê o preço e digita.
 2. Depois:
-   - **Telegram:** "Publicar agora" ou "Agendar". Só fica "Publicado com confirmação" quando o Telegram confirma.
-   - **WhatsApp:** "Abrir no WhatsApp" → escolha o grupo → a **foto vai junto com o texto** → envie → volte e responda **"Sim, enviei"**.
+   - **Telegram:** "Publicar agora" ou "Agendar". Com várias fotos, sai como álbum com o texto na primeira. Só fica "Publicado com confirmação" quando o Telegram confirma.
+   - **WhatsApp:** "Abrir no WhatsApp" → escolha o grupo → **todas as fotos vão juntas**; o texto fica copiado para colar, se o WhatsApp não puser junto → envie → volte e responda **"Sim, enviei"**.
    - **Agendado no WhatsApp:** na hora chega uma notificação "Hora de publicar". Toque e envie.
 3. Se aparecer **"Envio não confirmado"**, olhe o canal. Se a mensagem está lá, toque em "Apareceu no canal". Se não está, toque em "Tentar de novo" (não duplica).
 

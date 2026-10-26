@@ -4,6 +4,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
@@ -72,7 +76,8 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
     var comissao by mutableStateOf("")
     var comissaoOrigem by mutableStateOf<String?>(null)
     var imagem by mutableStateOf("")
-    var fotoLocal by mutableStateOf<String?>(null)
+    /** Caminhos das fotos (até 10). A primeira é a principal. */
+    var fotos by mutableStateOf<List<String>>(emptyList())
     var descricao by mutableStateOf("")
     var caracteristicas by mutableStateOf("")
     var observacoes by mutableStateOf("")
@@ -92,7 +97,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
         precoAnterior = p.precoAnterior?.let { Precos.formatar(it).removePrefix("R$ ") }.orEmpty()
         anteriorComprovado = p.precoAnteriorComprovado
         comissao = p.comissaoPercentual?.toString().orEmpty(); comissaoOrigem = p.comissaoOrigem
-        imagem = p.imagemUrl.orEmpty(); fotoLocal = p.fotoLocal; descricao = p.descricaoOriginal; caracteristicas = p.caracteristicas; observacoes = p.observacoes
+        imagem = p.imagemUrl.orEmpty(); fotos = p.fotoLocal?.lines()?.filter(String::isNotBlank).orEmpty(); descricao = p.descricaoOriginal; caracteristicas = p.caracteristicas; observacoes = p.observacoes
     }
 
     fun analisar() = viewModelScope.launch {
@@ -133,7 +138,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
             d.foto?.let { f ->
                 uris.getOrNull(f.imagem)?.let { u ->
                     runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { bot.afiliados.data.Fotos.recortar(ctx, u, f.caixa) } }
-                        .onSuccess { fotoLocal = it }
+                        .onSuccess { fotos = (listOf(it) + fotos).take(10) }
                 }
             }
             d.preco?.let { preco = Precos.formatar(it).removePrefix("R$ "); precoDoPrint = it }
@@ -216,7 +221,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
             comissaoPercentual = Precos.ler(comissao),
             comissaoOrigem = if (comissao.isBlank()) null else comissaoOrigem ?: "manual",
             imagemUrl = imagem.trim().ifBlank { null },
-            fotoLocal = fotoLocal,
+            fotoLocal = fotos.take(10).joinToString("\n").ifBlank { null },
             descricaoOriginal = descricao.trim(),
             caracteristicas = caracteristicas.trim(),
             observacoes = observacoes.trim(),
@@ -265,10 +270,15 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
     val escolherPrints = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { uris ->
         vm.lerPrints(ctx, uris)
     }
-    val escolherFoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) escopoTela.launch {
-            runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { bot.afiliados.data.Fotos.daGaleria(ctx, uri) } }
-                .onSuccess { vm.fotoLocal = it }.onFailure { ctx.avisar(it.message ?: "Não deu para usar essa imagem") }
+    val escolherFotos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { uris ->
+        val vagas = 10 - vm.fotos.size
+        if (uris.size > vagas) ctx.avisar("Máximo de 10 fotos. Entraram só $vagas.")
+        if (uris.isNotEmpty() && vagas > 0) escopoTela.launch {
+            val novas = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                uris.take(vagas).mapNotNull { u -> runCatching { bot.afiliados.data.Fotos.daGaleria(ctx, u) }.getOrNull() }
+            }
+            if (novas.size < uris.take(vagas).size) ctx.avisar("Algumas imagens não puderam ser usadas")
+            vm.fotos = (vm.fotos + novas).take(10)
         }
     }
     // Print enviado pelo "Compartilhar" de outro app.
@@ -354,13 +364,24 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
                     }
                 }
                 item {
-                    Secao("Foto do produto") {
-                        val foto = vm.fotoLocal?.let { java.io.File(it) }?.takeIf { it.isFile }
-                        if (foto != null) coil.compose.AsyncImage(foto, null, Modifier.fillMaxWidth().heightIn(max = 280.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
-                        else Text("Sem foto. Ela é recortada do print sozinha, ou escolha uma da galeria.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { escolherFoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) { Text(if (foto != null) "Trocar foto" else "Escolher foto") }
-                            if (foto != null) TextButton(onClick = { vm.fotoLocal = null }) { Text("Remover") }
+                    Secao("Fotos do produto (${vm.fotos.size}/10)") {
+                        val arquivos = vm.fotos.map { java.io.File(it) }
+                        arquivos.firstOrNull()?.let { coil.compose.AsyncImage(it, null, Modifier.fillMaxWidth().heightIn(max = 260.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit) }
+                        if (arquivos.isEmpty()) Text("Sem fotos. A principal é recortada do print sozinha; adicione mais da galeria.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (arquivos.size > 1 || arquivos.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(arquivos.size) { i ->
+                                androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    coil.compose.AsyncImage(arquivos[i], null,
+                                        Modifier.size(72.dp).clip(RoundedCornerShape(8.dp)).clickable { vm.fotos = listOf(vm.fotos[i]) + vm.fotos.filterIndexed { j, _ -> j != i } },
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                                    Text(if (i == 0) "Principal" else "Tornar 1ª", style = MaterialTheme.typography.labelSmall,
+                                        color = if (i == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    TextButton(onClick = { vm.fotos = vm.fotos.filterIndexed { j, _ -> j != i } }) { Text("Tirar", color = MaterialTheme.colorScheme.error) }
+                                }
+                            }
+                        }
+                        OutlinedButton(enabled = vm.fotos.size < 10, onClick = { escolherFotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+                            Text("Adicionar fotos da galeria")
                         }
                     }
                 }

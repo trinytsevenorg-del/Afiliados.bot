@@ -98,6 +98,19 @@ class RepositorioTest {
         assertEquals("77", item.idMensagemExterna)
     }
 
+    @Test fun publicaTodasAsFotosDoProduto() = runBlocking {
+        val ctx = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val arquivos = (1..3).map { i -> java.io.File(ctx.cacheDir, "f$i.jpg").apply { writeBytes(ByteArray(300) { i.toByte() }) } }
+        val id = itemAgendadoNoTelegram()
+        val item = banco.dao().itemAgora(id)!!
+        val p = banco.dao().produtoAgora(item.produtoId)!!
+        banco.dao().atualizar(p.copy(fotoLocal = arquivos.joinToString("\n") { it.path } + "\n/nao/existe.jpg"))
+        srv.enqueue(MockResponse().setBody("""{"chatId":"-100","messageId":5,"publicadoEm":"x"}"""))
+        assertEquals(EstadoFila.PUBLICADO_CONFIRMADO, repo.publicarAutomatico(id))
+        val corpo = srv.takeRequest().body.readUtf8()
+        assertEquals(3, Regex("\"tipo\":\"image/jpeg\"").findAll(corpo).count())
+    }
+
     @Test fun precoVencidoParaAPublicacaoSemChamarARede() = runBlocking {
         val id = itemAgendadoNoTelegram()
         relogio += 7 * 3_600_000L

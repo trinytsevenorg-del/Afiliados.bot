@@ -163,15 +163,19 @@ fun Context.abrirLink(url: String) {
 }
 
 /** Abre o compartilhamento do Android. Abrir NÃO significa que foi enviado. */
-fun Context.compartilhar(texto: String, direto: String? = null, foto: java.io.File? = null) {
-    val base = Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, texto)
-    if (foto != null && foto.isFile) {
-        // Foto + texto juntos: o WhatsApp manda a imagem com o texto na legenda.
-        val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.arquivos", foto)
-        base.setType("image/jpeg").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    } else {
-        base.setType("text/plain")
-    }
+fun Context.compartilhar(texto: String, direto: String? = null, fotos: List<java.io.File> = emptyList()) {
+    val existentes = fotos.filter { it.isFile }.take(10)
+    val uris = existentes.map { androidx.core.content.FileProvider.getUriForFile(this, "$packageName.arquivos", it) }
+    val base = when {
+        uris.size > 1 -> {
+            // Várias fotos: alguns apps ignoram o texto junto, então ele também vai para a área de transferência.
+            copiar("Oferta", texto)
+            avisar("Texto copiado. Se não aparecer junto das fotos, é só colar.")
+            Intent(Intent.ACTION_SEND_MULTIPLE).setType("image/jpeg").putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+        }
+        uris.size == 1 -> Intent(Intent.ACTION_SEND).setType("image/jpeg").putExtra(Intent.EXTRA_STREAM, uris[0])
+        else -> Intent(Intent.ACTION_SEND).setType("text/plain")
+    }.putExtra(Intent.EXTRA_TEXT, texto).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     if (direto != null) {
         try {
             startActivity(Intent(base).setPackage(direto))
