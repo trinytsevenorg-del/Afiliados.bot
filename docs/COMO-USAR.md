@@ -25,7 +25,7 @@
 1. Na loja, tire **1 print de cada produto** (com GANHOS e o preço aparecendo).
 2. No app: **Início → Lote de prints → Escolher prints** (até 30). A IA lê cada um, recorta a foto, **escolhe o nicho** e escreve o título.
 3. Em **Colar os links**: para cada produto, copie o link na loja (GANHOS → copiar) e toque em **📋 Colar link**. A oferta vai pronta para a fila, no canal do nicho.
-4. Na **Fila**, toque em **🚀 Publicar todos no Telegram**: um a cada 15 minutos (mude em Ajustes).
+4. Na **Fila**, toque em **🚀 Publicar todos**: em cada canal, um a cada 15 minutos (mude em Ajustes). Com o banco (DATABASE_URL) ligado, quem posta é o servidor: pode desligar o celular.
 
 **Um canal por nicho:** crie os canais no Telegram, ponha o **mesmo bot** como admin em todos, cadastre em Ajustes → Canais e marque os canais de cada nicho. A oferta sai em todos os marcados; em cada canal, uma a cada intervalo.
 

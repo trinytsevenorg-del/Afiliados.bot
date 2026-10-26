@@ -37,6 +37,8 @@ class PublicarWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         val id = inputData.getLong(ITEM, -1)
         val item = repo.dao.itemAgora(id) ?: return Result.success()
         if (item.estado != EstadoFila.AGENDADO) return Result.success()
+        // Quem publica este é o servidor.
+        if (item.noServidor) return Result.success()
         val canal = item.canalId?.let { repo.dao.canal(it) }
         if (canal?.tipo?.automatico == true) {
             val novo = repo.publicarAutomatico(id)
@@ -72,6 +74,26 @@ class PublicarWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             WorkManager.getInstance(ctx).cancelUniqueWork(nome(id))
         }
     }
+}
+
+/**
+ * Agenda a publicação. Canal automático vai para a fila do servidor (sai com o celular desligado);
+ * se o servidor não tiver fila ou estiver fora, o próprio celular publica, como antes.
+ * Devolve true quando ficou no servidor.
+ */
+suspend fun agendarPublicacao(app: AfiliadosApp, item: ItemFila, automatico: Boolean, politica: ExistingWorkPolicy = ExistingWorkPolicy.REPLACE): Boolean {
+    if (automatico && app.repo.agendarNoServidor(item)) {
+        PublicarWorker.cancelar(app, item.id)
+        return true
+    }
+    PublicarWorker.agendar(app, item, automatico, politica)
+    return false
+}
+
+/** Cancela no celular e no servidor. Devolve false se o servidor já publicou. */
+suspend fun cancelarPublicacao(app: AfiliadosApp, item: ItemFila): Boolean {
+    PublicarWorker.cancelar(app, item.id)
+    return app.repo.tirarDoServidor(item)
 }
 
 object Notificacoes {

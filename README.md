@@ -32,7 +32,7 @@ Projeto separado da BattleHub. Não compartilha código, banco nem contas.
 | Backup JSON (exportar/importar sem duplicar) | Funciona |
 | Bloqueio por digital/senha do aparelho | Opcional, em Ajustes |
 
-**Começando do zero:** [`docs/PRIMEIROS-PASSOS.md`](docs/PRIMEIROS-PASSOS.md). Passo a passo de uso: [`docs/COMO-USAR.md`](docs/COMO-USAR.md). O que depende de credencial ou aprovação: [`docs/INTEGRACOES.md`](docs/INTEGRACOES.md). WhatsApp automático: [`docs/WHATSAPP.md`](docs/WHATSAPP.md).
+**Começando do zero:** [`docs/PRIMEIROS-PASSOS.md`](docs/PRIMEIROS-PASSOS.md). Passo a passo de uso: [`docs/COMO-USAR.md`](docs/COMO-USAR.md). O que depende de credencial ou aprovação: [`docs/INTEGRACOES.md`](docs/INTEGRACOES.md). WhatsApp automático: [`docs/WHATSAPP.md`](docs/WHATSAPP.md). Plano de venda: [`docs/VENDA.md`](docs/VENDA.md).
 
 ## Rodar o backend
 
@@ -40,7 +40,7 @@ Projeto separado da BattleHub. Não compartilha código, banco nem contas.
 cd backend
 cp .env.example .env      # preencha APP_TOKEN e as chaves que tiver
 npm ci
-npm test                  # 55 testes
+npm test                  # 62 testes
 npm run build && npm start
 ```
 
@@ -53,7 +53,7 @@ O app só aceita backend em **HTTPS**. Opções:
 
 ```bash
 cd android
-./gradlew :app:testDebugUnitTest   # 48 testes
+./gradlew :app:testDebugUnitTest   # 51 testes
 ./gradlew :app:assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
 ```
 

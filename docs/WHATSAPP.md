@@ -58,6 +58,7 @@ Fora do Render, defina `KEEPALIVE_URL` com o endereço público. O cron-job.org 
 - Crie as ofertas (link ou prints).
 - Na **Fila**, toque em **🚀 Publicar todos**.
 - O app agenda uma por vez, no intervalo de Ajustes (15 ou 30 min).
+- Quem posta é o servidor (fila no banco). Pode desligar o celular. Ao abrir o app, ele mostra o que já saiu.
 
 ## Se cair
 

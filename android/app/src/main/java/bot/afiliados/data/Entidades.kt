@@ -151,6 +151,8 @@ data class ItemFila(
     val ordem: Int = 0,
     val ultimoResultado: String? = null,
     val idMensagemExterna: String? = null,
+    /** Agendado na fila do servidor: sai mesmo com o celular desligado. */
+    @androidx.room.ColumnInfo(defaultValue = "0") val noServidor: Boolean = false,
     val criadoEm: Long = System.currentTimeMillis(),
     val atualizadoEm: Long = System.currentTimeMillis(),
 )

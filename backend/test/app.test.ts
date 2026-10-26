@@ -21,6 +21,14 @@ describe("acesso", () => {
     expect((await a.inject({ url: "/api/integrations/status", headers: auth })).statusCode).toBe(200);
   });
 
+  it("fila no servidor: sem banco avisa e só aceita grupo no WhatsApp", async () => {
+    const a = await app();
+    expect((await a.inject({ url: "/api/fila/status", headers: auth })).json()).toEqual({ ativa: false });
+    const base = { chave: "fila-12345678", texto: "oi", quando: Date.now() };
+    expect((await a.inject({ method: "POST", url: "/api/fila", headers: auth, payload: { ...base, canal: "telegram", destino: "@meucanal" } })).statusCode).toBe(503);
+    expect((await a.inject({ method: "POST", url: "/api/fila", headers: auth, payload: { ...base, canal: "whatsapp", destino: "5521999998888@s.whatsapp.net" } })).statusCode).toBe(400);
+  });
+
   it("valida a entrada e recusa corpo grande", async () => {
     const a = await app();
     const r = await a.inject({ method: "POST", url: "/api/copy/generate", headers: auth, payload: { nome: "" } });

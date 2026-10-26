@@ -174,6 +174,50 @@ class RepositorioTest {
         assertEquals(listOf(tg to 0L, wa to 1L, tg to 15L, wa to 16L), ag.map { it.first to (it.second - base) / 60_000 })
     }
 
+    @Test fun filaNoServidorAgendaSincronizaECancela() = runBlocking {
+        val dao = banco.dao()
+        val id = itemAgendadoNoTelegram()
+        dao.atualizar(dao.itemAgora(id)!!.copy(planejadoPara = relogio + 15 * 60_000))
+        srv.enqueue(MockResponse().setBody("""{"chave":"x","estado":"agendado"}"""))
+        assertTrue(repo.agendarNoServidor(dao.itemAgora(id)!!))
+        val pedido = srv.takeRequest()
+        assertEquals("/api/fila", pedido.path)
+        val corpo = pedido.body.readUtf8()
+        assertTrue(corpo.contains("\"canal\":\"telegram\"") && corpo.contains("\"destino\":\"@meucanal\""))
+        assertTrue(corpo.contains("\"validoAte\":${relogio + 6 * 3_600_000L}"))
+        val item = dao.itemAgora(id)!!
+        assertTrue(item.noServidor)
+        assertEquals(EstadoFila.AGENDADO, item.estado)
+
+        // Ainda não saiu: segue agendado com o recado do servidor.
+        srv.enqueue(MockResponse().setBody("""{"itens":[{"chave":"${item.chave}","estado":"agendado","resultado":"Esperando: limite","quando":5}]}"""))
+        assertEquals(0, repo.sincronizarServidor())
+        assertEquals("Esperando: limite", dao.itemAgora(id)!!.ultimoResultado)
+        // Saiu: vira publicado com o id da mensagem.
+        srv.enqueue(MockResponse().setBody("""{"itens":[{"chave":"${item.chave}","estado":"publicado","resultado":"Telegram confirmou","mensagemId":"77","quando":5,"atualizadoEm":6}]}"""))
+        assertEquals(1, repo.sincronizarServidor())
+        assertEquals(EstadoFila.PUBLICADO_CONFIRMADO, dao.itemAgora(id)!!.estado)
+        assertEquals("77", dao.itemAgora(id)!!.idMensagemExterna)
+    }
+
+    @Test fun cancelarDepoisQueOServidorPublicouNaoCancela() = runBlocking {
+        val dao = banco.dao()
+        val id = itemAgendadoNoTelegram()
+        dao.atualizar(dao.itemAgora(id)!!.copy(noServidor = true))
+        val chave = dao.itemAgora(id)!!.chave
+        srv.enqueue(MockResponse().setBody("""{"chave":"$chave","estado":"publicado","mensagemId":"9"}"""))
+        srv.enqueue(MockResponse().setBody("""{"itens":[{"chave":"$chave","estado":"publicado","mensagemId":"9"}]}"""))
+        assertEquals(false, repo.tirarDoServidor(dao.itemAgora(id)!!))
+        assertEquals(EstadoFila.PUBLICADO_CONFIRMADO, dao.itemAgora(id)!!.estado)
+    }
+
+    @Test fun semFilaNoServidorOCelularPublica() = runBlocking {
+        val id = itemAgendadoNoTelegram()
+        srv.enqueue(MockResponse().setResponseCode(503).setBody("""{"erro":"nao_configurado","mensagem":"Fila no servidor precisa do banco"}"""))
+        assertEquals(false, repo.agendarNoServidor(banco.dao().itemAgora(id)!!))
+        assertEquals(false, banco.dao().itemAgora(id)!!.noServidor)
+    }
+
     @Test fun precoVencidoParaAPublicacaoSemChamarARede() = runBlocking {
         val id = itemAgendadoNoTelegram()
         relogio += 7 * 3_600_000L

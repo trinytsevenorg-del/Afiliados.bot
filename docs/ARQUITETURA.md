@@ -23,6 +23,16 @@ Celular (Android)                         Backend (Node/TS)                 Serv
 - `ui/`: telas Início, Produtos, Novo/Editar produto, Detalhe, Criar oferta, Nichos, Fila, Revisão, Comissões e Ajustes.
 - Sem Hilt: um contêiner simples em `AfiliadosApp` basta para um app pessoal.
 
+## Fila no servidor
+
+- Com `DATABASE_URL`, o app manda cada item agendado de canal automático para `POST /api/fila`.
+- O servidor confere a fila a cada 30 s e posta o que venceu (Telegram ou WhatsApp). Funciona com o celular desligado.
+- A chave do item é a mesma do app: reenviar ou repetir não duplica.
+- Preço com validade vencida na hora de sair: não posta (falha com aviso).
+- Item preso em "enviando" (servidor reiniciou) vira falha "não confirmado". Nunca reenvia às cegas.
+- O app busca o resultado ao abrir e na tela da Fila (`POST /api/fila/consultar`).
+- Sem banco ou com o servidor fora, o celular publica, como antes (WorkManager).
+
 ## Estados da fila
 
 ```
@@ -44,5 +54,5 @@ Uma consulta que falha não apaga o preço salvo e também não renova a validad
 
 ## Testes
 
-- Backend: `npm test`, com 55 testes (WhatsApp com socket falso, links e redirecionamentos, assinatura da Shopee, erros e acesso, renovação do token do ML, conferência dos textos da IA, limite diário, token obrigatório, corpo grande e Telegram sem duplicar, inclusive depois de reiniciar).
-- Android: `./gradlew :app:testDebugUnitTest`, com 48 testes (regras, cliente HTTPS, backup, repositório com Room real, fluxo de publicação e abertura das telas com Robolectric).
+- Backend: `npm test`, com 62 testes (WhatsApp com socket falso, links e redirecionamentos, assinatura da Shopee, erros e acesso, renovação do token do ML, conferência dos textos da IA, limite diário, token obrigatório, corpo grande e Telegram sem duplicar, inclusive depois de reiniciar).
+- Android: `./gradlew :app:testDebugUnitTest`, com 51 testes (regras, cliente HTTPS, backup, repositório com Room real, fluxo de publicação e abertura das telas com Robolectric).

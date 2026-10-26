@@ -403,6 +403,86 @@ class Repositorio(
         return novo
     }
 
+    // ---------- Fila no servidor ----------
+
+    /** Monta o que vai para o Telegram ou o WhatsApp, igual à publicação pelo celular. */
+    private fun pedidoFila(item: ItemFila, canal: Canal, produto: Produto, quando: Long): PedidoFila {
+        val texto = bot.afiliados.domain.Mensagem.montar(item.texto, item.link, item.hashtags.split(' ').filter { it.isNotBlank() })
+        val validoAte = produto.ultimaVerificacao?.let { it + prefs.validadePrecoHoras * 3_600_000L }
+        return if (canal.tipo == TipoCanal.WHATSAPP_AUTO) {
+            PedidoFila(item.chave, "whatsapp", canal.destino, texto, produto.fotos.firstOrNull()?.let { Imagens.paraEnvio(it.path) }?.let(::listOf), null, quando, validoAte)
+        } else {
+            PedidoFila(item.chave, "telegram", canal.destino, bot.afiliados.domain.Mensagem.paraTelegramHtml(texto),
+                produto.fotos.take(10).mapNotNull { Imagens.paraEnvio(it.path) }.ifEmpty { null }, produto.imagemUrl, quando, validoAte)
+        }
+    }
+
+    /**
+     * Manda um item agendado para a fila do servidor. Devolve false quando o servidor não tem fila
+     * (sem banco) ou está fora: aí o celular publica, como antes.
+     */
+    suspend fun agendarNoServidor(item: ItemFila): Boolean {
+        val canal = item.canalId?.let { dao.canal(it) } ?: return false
+        if (!canal.tipo.automatico || !canal.ativo) return false
+        val produto = dao.produtoAgora(item.produtoId) ?: return false
+        val bloqueios = Fila.bloqueios(item.texto, item.link, situacaoPreco(produto), precoConfirmadoAgora = false)
+        if (bloqueios.isNotEmpty()) return false
+        val quando = item.planejadoPara ?: agora()
+        return try {
+            backend.filaAgendar(pedidoFila(item, canal, produto, quando))
+            val atual = dao.itemAgora(item.id) ?: return true
+            val recado = "No servidor: sai ${dataHora(quando)}, mesmo com o celular desligado"
+            val ag = atual.copy(noServidor = true, planejadoPara = quando, ultimoResultado = recado).also { dao.atualizar(it) }
+            if (ag.estado != EstadoFila.AGENDADO) dao.mudarEstado(ag, EstadoFila.AGENDADO, recado)
+            true
+        } catch (e: FalhaBackend) {
+            false
+        }
+    }
+
+    /** Traz do servidor o que já saiu (ou falhou). Devolve quantos itens mudaram. */
+    suspend fun sincronizarServidor(): Int {
+        val pendentes = dao.itensNoEstado(EstadoFila.AGENDADO).filter { it.noServidor }
+        if (pendentes.isEmpty()) return 0
+        val situacoes = try { backend.filaConsultar(pendentes.map { it.chave }) } catch (e: FalhaBackend) { return 0 }
+        var mudou = 0
+        for (s in situacoes) {
+            val item = pendentes.firstOrNull { it.chave == s.chave } ?: continue
+            val novo = when (s.estado) {
+                "publicado" -> EstadoFila.PUBLICADO_CONFIRMADO
+                "falha" -> EstadoFila.FALHA
+                "cancelado" -> EstadoFila.CANCELADO
+                else -> {
+                    // Ainda agendado: mostra o recado do servidor (ex.: esperando o limite do WhatsApp).
+                    if (s.resultado != null && s.resultado != item.ultimoResultado) dao.atualizar(item.copy(ultimoResultado = s.resultado, planejadoPara = s.quando))
+                    continue
+                }
+            }
+            val produto = dao.produtoAgora(item.produtoId)?.nome ?: "Oferta"
+            if (novo == EstadoFila.CANCELADO) dao.mudarEstado(item, EstadoFila.CANCELADO, s.resultado)
+            else {
+                val emProc = dao.mudarEstado(item, EstadoFila.EM_PROCESSAMENTO, "Servidor enviando")
+                dao.inserir(Tentativa(itemId = item.id, inicio = s.quando, fim = s.atualizadoEm, resultado = novo, detalhe = "Servidor: ${s.resultado.orEmpty()}"))
+                dao.mudarEstado(emProc, novo, "Servidor: ${s.resultado.orEmpty()}", s.mensagemId)
+            }
+            registrar("publicacao", "$produto: ${novo.rotulo} (servidor)")
+            mudou++
+        }
+        return mudou
+    }
+
+    /**
+     * Tira do servidor antes de cancelar ou mudar. Devolve false se já saiu:
+     * nesse caso o item vira "publicado" e não pode ser cancelado.
+     */
+    suspend fun tirarDoServidor(item: ItemFila): Boolean {
+        if (!item.noServidor) return true
+        val s = try { backend.filaCancelar(item.chave) } catch (e: FalhaBackend.Recusado) { if (e.status == 404) null else throw e }
+        if (s?.estado == "publicado" || s?.estado == "enviando") { sincronizarServidor(); return false }
+        dao.itemAgora(item.id)?.let { dao.atualizar(it.copy(noServidor = false)) }
+        return true
+    }
+
     private suspend fun AfiliadosDao.itemAtivo(id: Long) = itemAgora(id) ?: throw IllegalStateException("Item $id não existe")
 
     /** Itens que ficaram "em processamento" (app fechado no meio) viram "envio não confirmado". */

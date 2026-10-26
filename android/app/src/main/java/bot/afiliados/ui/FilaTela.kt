@@ -1,5 +1,11 @@
 package bot.afiliados.ui
 
+import bot.afiliados.data.FalhaBackend
+
+import bot.afiliados.work.cancelarPublicacao
+
+import bot.afiliados.work.agendarPublicacao
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -74,6 +80,8 @@ fun FilaTela(app: AfiliadosApp, nav: NavHostController) {
     var verConcluidos by rememberSaveable { mutableStateOf(false) }
     val escopo = rememberCoroutineScope()
     val nomes = produtos.associate { it.id to it.nome }
+    // Traz o que o servidor já publicou.
+    LaunchedEffect(Unit) { app.repo.sincronizarServidor() }
     val lista = fila.filter { verConcluidos || !it.estado.final }
     val ativos = lista.filter { !it.estado.final }
 
@@ -89,8 +97,9 @@ fun FilaTela(app: AfiliadosApp, nav: NavHostController) {
                 Button(modifier = Modifier.fillMaxWidth(), onClick = {
                     escopo.launch {
                         val itens = app.repo.agendarEmSequencia(app.repo.prontosAutomaticos(), app.prefs.intervaloMinutos)
-                        itens.forEach { PublicarWorker.agendar(ctx, it, true, ExistingWorkPolicy.REPLACE) }
-                        ctx.avisar("${itens.size} ofertas agendadas: uma a cada ${app.prefs.intervaloMinutos} min")
+                        val noServidor = itens.count { agendarPublicacao(app, it, true) }
+                        ctx.avisar("${itens.size} ofertas agendadas: uma a cada ${app.prefs.intervaloMinutos} min" +
+                            if (noServidor == itens.size) ". Saem mesmo com o celular desligado." else if (noServidor > 0) " ($noServidor no servidor)" else ". Deixe o celular com internet.")
                     }
                 }) { Text("🚀 Publicar todos ($prontosTelegram)") }
                 Text("Começa em 1 minuto e segue um a cada ${app.prefs.intervaloMinutos} min (mude em Ajustes).", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -157,6 +166,14 @@ fun ItemFilaTela(app: AfiliadosApp, nav: NavHostController, id: Long) {
     val automatico = canal?.tipo?.automatico == true
     val editavel = item.estado in setOf(EstadoFila.RASCUNHO, EstadoFila.AGUARDANDO_REVISAO, EstadoFila.AGUARDANDO_VERIFICACAO_PRECO, EstadoFila.PRONTO, EstadoFila.FALHA)
 
+    /** Tira do servidor (se estiver lá) e só então segue. Se já saiu, avisa e não mexe. */
+    fun tirarEDepois(depois: () -> Unit) = escopo.launch {
+        val atual = dao.itemAgora(id) ?: return@launch
+        try {
+            if (cancelarPublicacao(app, atual)) depois() else ctx.avisar("O servidor já publicou esta oferta")
+        } catch (e: FalhaBackend) { ctx.avisar("Não deu para falar com o servidor: ${e.message}") }
+    }
+
     fun mudar(novo: EstadoFila, msg: String? = null, depois: suspend (ItemFila) -> Unit = {}) = escopo.launch {
         try {
             val atual = dao.itemAgora(id) ?: return@launch
@@ -212,6 +229,9 @@ fun ItemFilaTela(app: AfiliadosApp, nav: NavHostController, id: Long) {
                         EstadoFila.PRONTO, EstadoFila.AGENDADO -> {
                             if (automatico) Button(enabled = bloqueios.isEmpty(), onClick = {
                                 escopo.launch {
+                                    val antes = dao.itemAgora(id) ?: return@launch
+                                    try { if (!cancelarPublicacao(app, antes)) { ctx.avisar("O servidor já publicou esta oferta"); return@launch } }
+                                    catch (e: FalhaBackend) { ctx.avisar("Não deu para falar com o servidor: ${e.message}"); return@launch }
                                     val atual = dao.itemAgora(id) ?: return@launch
                                     val pronto = if (atual.estado == EstadoFila.AGENDADO) atual else repo.mudar(atual.copy(texto = texto), EstadoFila.AGENDADO, "Enviar agora")
                                     val agora = pronto.copy(planejadoPara = System.currentTimeMillis()).also { dao.atualizar(it) }
@@ -224,7 +244,7 @@ fun ItemFilaTela(app: AfiliadosApp, nav: NavHostController, id: Long) {
                                 dialogo = "confirmar_envio"
                             }) { Text(if (canal?.tipo == TipoCanal.WHATSAPP_COMPARTILHAR) "Abrir no WhatsApp" else "Compartilhar") }
                             OutlinedButton(onClick = { dialogo = "agendar" }) { Text(if (item.estado == EstadoFila.AGENDADO) "Mudar horário" else "Agendar") }
-                            if (item.estado == EstadoFila.AGENDADO) OutlinedButton(onClick = { PublicarWorker.cancelar(ctx, id); mudar(EstadoFila.PRONTO, "Agendamento cancelado") }) { Text("Tirar da agenda") }
+                            if (item.estado == EstadoFila.AGENDADO) OutlinedButton(onClick = { tirarEDepois { mudar(EstadoFila.PRONTO, "Agendamento cancelado") } }) { Text("Tirar da agenda") }
                         }
                         EstadoFila.ENVIO_NAO_CONFIRMADO -> {
                             Button(onClick = { escopo.launch { repo.publicarAutomatico(id) } }) { Text("Tentar de novo") }
@@ -258,9 +278,9 @@ fun ItemFilaTela(app: AfiliadosApp, nav: NavHostController, id: Long) {
             dismissButton = { TextButton(onClick = { dialogo = null }) { Text("Ainda não") } },
         )
         "cancelar" -> Confirmar("Cancelar oferta?", "Ela sai da fila de publicação (o histórico fica).", "Cancelar oferta", destrutivo = true,
-            aoConfirmar = { PublicarWorker.cancelar(ctx, id); mudar(EstadoFila.CANCELADO, "Cancelado por você") }, aoFechar = { dialogo = null })
+            aoConfirmar = { tirarEDepois { mudar(EstadoFila.CANCELADO, "Cancelado por você") } }, aoFechar = { dialogo = null })
         "remover" -> Confirmar("Remover da fila?", "O item e as tentativas serão apagados.", "Remover", destrutivo = true,
-            aoConfirmar = { PublicarWorker.cancelar(ctx, id); escopo.launch { dao.itemAgora(id)?.let { dao.excluir(it) }; nav.popBackStack() } }, aoFechar = { dialogo = null })
+            aoConfirmar = { tirarEDepois { escopo.launch { dao.itemAgora(id)?.let { dao.excluir(it) }; nav.popBackStack() } } }, aoFechar = { dialogo = null })
         "agendar" -> SeletorHorario(item.planejadoPara, aoFechar = { dialogo = null }) { quando ->
             dialogo = null
             if (quando < System.currentTimeMillis() + 60_000) { ctx.avisar("Escolha um horário no futuro"); return@SeletorHorario }
@@ -268,9 +288,13 @@ fun ItemFilaTela(app: AfiliadosApp, nav: NavHostController, id: Long) {
                 val atual = dao.itemAgora(id) ?: return@launch
                 val base = atual.copy(texto = texto, planejadoPara = quando).also { dao.atualizar(it) }
                 val ag = if (base.estado == EstadoFila.AGENDADO) base else repo.mudar(base, EstadoFila.AGENDADO, "Agendado")
-                PublicarWorker.agendar(ctx, ag, automatico, ExistingWorkPolicy.REPLACE)
+                val noServidor = agendarPublicacao(app, ag, automatico)
                 repo.registrar("fila", "Agendou ${produto?.nome} para ${Repositorio.dataHora(quando)}")
-                ctx.avisar(if (automatico) "Agendado. O Android pode atrasar alguns minutos." else "Agendado. Você recebe um lembrete para enviar.")
+                ctx.avisar(when {
+                    noServidor -> "Agendado no servidor. Sai mesmo com o celular desligado."
+                    automatico -> "Agendado no celular. O Android pode atrasar alguns minutos."
+                    else -> "Agendado. Você recebe um lembrete para enviar."
+                })
             }
         }
     }

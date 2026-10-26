@@ -106,6 +106,13 @@ data class DadosPrint(
 @Serializable data class PedidoWhatsapp(val chave: String, val grupo: String, val texto: String, val foto: ImagemPrint? = null)
 @Serializable data class RespostaWhatsapp(val grupo: String, val mensagemId: String, val repetido: Boolean = false)
 @Serializable data class Ok(val ok: Boolean = true)
+@Serializable data class FilaAtiva(val ativa: Boolean = false)
+@Serializable data class PedidoFila(
+    val chave: String, val canal: String, val destino: String, val texto: String,
+    val fotos: List<ImagemPrint>? = null, val imagem: String? = null, val quando: Long, val validoAte: Long? = null,
+)
+@Serializable data class SituacaoFila(val chave: String, val estado: String, val resultado: String? = null, val mensagemId: String? = null, val quando: Long = 0, val atualizadoEm: Long = 0)
+@Serializable data class ListaSituacoes(val itens: List<SituacaoFila>)
 
 class Backend(
     private val urlBase: () -> String,
@@ -171,5 +178,11 @@ class Backend(
     suspend fun whatsappDesconectar() = chamar("POST", "/api/whatsapp/disconnect", "{}", Ok.serializer())
     suspend fun whatsappGrupos() = chamar("GET", "/api/whatsapp/groups", null, ListaGrupos.serializer())
     suspend fun publicarWhatsapp(p: PedidoWhatsapp) = chamar("POST", "/api/publish/whatsapp", corpo(p, PedidoWhatsapp.serializer()), RespostaWhatsapp.serializer())
+    @Serializable private data class ComChaves(val chaves: List<String>)
+    @Serializable private data class ComChave(val chave: String)
+    suspend fun filaAtiva() = chamar("GET", "/api/fila/status", null, FilaAtiva.serializer()).ativa
+    suspend fun filaAgendar(p: PedidoFila) = chamar("POST", "/api/fila", corpo(p, PedidoFila.serializer()), SituacaoFila.serializer())
+    suspend fun filaConsultar(chaves: List<String>) = chamar("POST", "/api/fila/consultar", corpo(ComChaves(chaves), ComChaves.serializer()), ListaSituacoes.serializer()).itens
+    suspend fun filaCancelar(chave: String) = chamar("POST", "/api/fila/cancelar", corpo(ComChave(chave), ComChave.serializer()), SituacaoFila.serializer())
     suspend fun testarTelegram(chatId: String) = chamar("POST", "/api/telegram/test-destination", corpo(ComChat(chatId), ComChat.serializer()), DestinoTelegram.serializer())
 }

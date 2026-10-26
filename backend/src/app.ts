@@ -9,6 +9,7 @@ import { Shopee } from "./integrations/shopee.js";
 import { Telegram } from "./integrations/telegram.js";
 import { ArmazemComErro, ArmazemPostgres, normalizarUrlBanco, WhatsApp } from "./integrations/whatsapp.js";
 import { IntegracaoErro } from "./integrations/types.js";
+import { ArmazemFilaPostgres, FilaServidor } from "./fila.js";
 import { analisarLink, extrairIds, LinkInvalido, validarUrl } from "./lib/links.js";
 
 export interface Deps {
@@ -17,10 +18,17 @@ export interface Deps {
   ia: GeradorTexto;
   telegram: Telegram;
   whatsapp: WhatsApp;
+  fila: FilaServidor;
   fetchImpl?: typeof fetch;
 }
 
 export function criarDeps(cfg: Config): Deps {
+  const banco = bancoDaConfig(cfg.DATABASE_URL);
+  const telegram = new Telegram({ token: cfg.TELEGRAM_BOT_TOKEN, dataDir: cfg.DATA_DIR });
+  const whatsapp = new WhatsApp(
+    banco === null ? null : "erro" in banco ? new ArmazemComErro(banco.erro) : new ArmazemPostgres(banco.pool),
+    { intervaloMin: cfg.WA_INTERVALO_MIN, maxDia: cfg.WA_MAX_DIA },
+  );
   return {
     shopee: new Shopee({ appId: cfg.SHOPEE_APP_ID, secret: cfg.SHOPEE_SECRET, endpoint: cfg.SHOPEE_ENDPOINT }),
     ml: new MercadoLivre({ clientId: cfg.ML_CLIENT_ID, clientSecret: cfg.ML_CLIENT_SECRET, refreshToken: cfg.ML_REFRESH_TOKEN, dataDir: cfg.DATA_DIR }),
@@ -28,19 +36,21 @@ export function criarDeps(cfg: Config): Deps {
       apiKey: cfg.ANTHROPIC_API_KEY, modelo: cfg.AI_MODEL, limiteDiario: cfg.AI_DAILY_LIMIT,
       geminiKey: cfg.GEMINI_API_KEY, geminiModelos: cfg.GEMINI_MODELS.split(",").map((m) => m.trim()).filter(Boolean),
     }),
-    telegram: new Telegram({ token: cfg.TELEGRAM_BOT_TOKEN, dataDir: cfg.DATA_DIR }),
-    whatsapp: new WhatsApp(
-      armazemDoBanco(cfg.DATABASE_URL),
-      { intervaloMin: cfg.WA_INTERVALO_MIN, maxDia: cfg.WA_MAX_DIA },
-    ),
+    telegram,
+    whatsapp,
+    fila: new FilaServidor(banco && "pool" in banco ? new ArmazemFilaPostgres(banco.pool) : null, { telegram, whatsapp }),
   };
 }
 
-function armazemDoBanco(bruto: string | undefined) {
+/** Um só pool de conexões para a sessão do WhatsApp e a fila. */
+function bancoDaConfig(bruto: string | undefined): null | { erro: string } | { pool: pg.Pool } {
   if (!bruto) return null;
   const r = normalizarUrlBanco(bruto);
-  if ("erro" in r) return new ArmazemComErro(r.erro);
-  return new ArmazemPostgres(new pg.Pool({ connectionString: r.url, ssl: { rejectUnauthorized: false }, max: 3 }));
+  if ("erro" in r) return r;
+  const pool = new pg.Pool({ connectionString: r.url, ssl: { rejectUnauthorized: false }, max: 4 });
+  // Conexão parada que cai (ex.: o Supabase reinicia) não pode derrubar o servidor.
+  pool.on("error", () => undefined);
+  return { pool };
 }
 
 function tokenIgual(recebido: string, esperado: string) {
@@ -187,6 +197,40 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
       })
       .parse(req.body);
     return deps.whatsapp.publicar(b);
+  });
+
+  // ---------- Fila no servidor (posta com o celular desligado) ----------
+  app.get("/api/fila/status", async () => ({ ativa: deps.fila.ativa }));
+
+  app.post("/api/fila", { bodyLimit: 40 * 1024 * 1024 }, async (req) => {
+    const b = z
+      .object({
+        chave: z.string().min(8).max(100),
+        canal: z.enum(["telegram", "whatsapp"]),
+        destino: z.string().min(2).max(60),
+        texto: z.string().min(1).max(4096),
+        fotos: z.array(FotoEnvio).max(10).nullish(),
+        imagem: z.string().max(2048).nullish(),
+        quando: z.number().int().positive(),
+        validoAte: z.number().int().positive().nullish(),
+      })
+      .parse(req.body);
+    if (b.canal === "whatsapp" && !/^[\d-]{5,40}@g\.us$/.test(b.destino)) throw new IntegracaoErro("resposta_invalida", "Só é permitido postar em grupos", 400);
+    if (b.canal === "telegram" && !/^(@[A-Za-z0-9_]{5,32}|-?\d{5,20})$/.test(b.destino)) throw new IntegracaoErro("resposta_invalida", "Use @canal ou o ID numérico", 400);
+    if (b.imagem && !b.imagem.startsWith("https://")) throw new LinkInvalido("A imagem precisa ser HTTPS");
+    return deps.fila.agendar(b);
+  });
+
+  app.post("/api/fila/consultar", async (req) => {
+    const { chaves } = z.object({ chaves: z.array(z.string().min(8).max(100)).max(500) }).parse(req.body);
+    return { itens: await deps.fila.consultar(chaves) };
+  });
+
+  app.post("/api/fila/cancelar", async (req) => {
+    const { chave } = z.object({ chave: z.string().min(8).max(100) }).parse(req.body);
+    const r = await deps.fila.cancelar(chave);
+    if (!r) throw new IntegracaoErro("nao_encontrado", "Item não está na fila do servidor", 404);
+    return r;
   });
 
   app.post("/api/telegram/test-destination", async (req) => {

@@ -42,9 +42,12 @@ class AfiliadosApp : Application() {
         repo.recuperarInterrompidos()
         val dao = repo.dao
         for (item in dao.itensNoEstado(EstadoFila.AGENDADO)) {
+            if (item.noServidor) continue
             val auto = item.canalId?.let { dao.canal(it) }?.tipo?.automatico == true
             PublicarWorker.agendar(this, item, auto, ExistingWorkPolicy.KEEP)
         }
+        // O que o servidor publicou enquanto o app estava fechado.
+        repo.sincronizarServidor()
         dao.limparAtividades(System.currentTimeMillis() - 90L * 24 * 3_600_000)
     }
 
