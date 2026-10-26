@@ -94,7 +94,7 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
     return reply.code(500).send({ erro: "interno", mensagem: "Erro interno no backend" });
   });
 
-  app.get("/api/health", async () => ({ ok: true, versao: "0.1.0", hora: new Date().toISOString() }));
+  app.get("/api/health", async () => ({ ok: true, versao: "0.1.0", hora: new Date().toISOString(), banco: deps.whatsapp.banco }));
 
   app.get("/api/integrations/status", async (req) => {
     const testar = (req.query as { testar?: string }).testar === "1";

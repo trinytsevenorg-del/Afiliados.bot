@@ -43,18 +43,27 @@ export class ArmazemMemoria implements Armazem {
 }
 
 export class ArmazemPostgres implements Armazem {
-  private pronto: Promise<void>;
+  private pronto: Promise<void> | null = null;
   constructor(private readonly pool: import("pg").Pool) {
-    this.pronto = pool
+    // Conexão parada que cai (ex.: o Supabase reinicia) não pode derrubar o servidor.
+    pool.on("error", () => undefined);
+  }
+  /** Cria as tabelas na primeira consulta. Se falhar, tenta de novo na próxima. */
+  private preparar() {
+    this.pronto ??= this.pool
       .query(
         `CREATE TABLE IF NOT EXISTS wa_sessao (chave text PRIMARY KEY, valor text NOT NULL);
          CREATE TABLE IF NOT EXISTS wa_envios (chave text PRIMARY KEY, grupo text NOT NULL, mensagem_id text NOT NULL, quando bigint NOT NULL);
          CREATE INDEX IF NOT EXISTS wa_envios_grupo ON wa_envios (grupo, quando);`,
       )
-      .then(() => undefined);
+      .then(
+        () => undefined,
+        (e) => { this.pronto = null; throw e; },
+      );
+    return this.pronto;
   }
   private async q(sql: string, p: unknown[] = []) {
-    await this.pronto;
+    await this.preparar();
     return this.pool.query(sql, p);
   }
   async ler(c: string) { return ((await this.q("SELECT valor FROM wa_sessao WHERE chave = $1", [c])).rows[0]?.valor as string) ?? null; }
@@ -144,9 +153,22 @@ export class WhatsApp {
   }
 
   /** Ao ligar o backend: reconecta se já existe sessão salva. */
+  /** "sem" = sem DATABASE_URL; "erro" = não conectou no banco. */
+  banco: "sem" | "ok" | "erro" = "sem";
+
+  /** Nunca derruba o servidor: erro de banco ou de conexão vira aviso no status. */
   async iniciar() {
     if (!this.armazem) return;
-    if (await this.armazem.ler("creds")) await this.abrir().catch((e) => { this.ultimoErro = String(e?.message ?? e); });
+    let creds: string | null;
+    try {
+      creds = await this.armazem.ler("creds");
+      this.banco = "ok";
+    } catch (e) {
+      this.banco = "erro";
+      this.ultimoErro = `Não conectou no banco (DATABASE_URL): ${(e as Error)?.message ?? e}`;
+      return;
+    }
+    if (creds) await this.abrir().catch((e) => { this.ultimoErro = String(e?.message ?? e); });
   }
 
   private async abrir(telefone?: string): Promise<string | null> {

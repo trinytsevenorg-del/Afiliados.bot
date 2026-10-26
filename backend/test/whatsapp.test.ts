@@ -43,6 +43,15 @@ describe("WhatsApp automático (número próprio)", () => {
     await expect(wa.publicar({ chave: "fila-1-abcdef", grupo: "111@g.us", texto: "x" })).rejects.toMatchObject({ codigo: "nao_configurado" });
   });
 
+  it("banco fora do ar não derruba o servidor e aparece no status", async () => {
+    const armazem = new ArmazemMemoria();
+    armazem.ler = async () => { throw new Error("password authentication failed"); };
+    const wa = new WhatsApp(armazem, { intervaloMin: 10, maxDia: 40 });
+    await expect(wa.iniciar()).resolves.toBeUndefined();
+    expect(wa.banco).toBe("erro");
+    expect(wa.status().detalhe).toContain("password authentication failed");
+  });
+
   it("conecta pelo código de 8 letras e lista os grupos", async () => {
     const { wa, codigo } = await conectado();
     expect(codigo).toBe("ABCD-1234");
