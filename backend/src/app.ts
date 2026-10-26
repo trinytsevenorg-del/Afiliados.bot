@@ -21,7 +21,10 @@ export function criarDeps(cfg: Config): Deps {
   return {
     shopee: new Shopee({ appId: cfg.SHOPEE_APP_ID, secret: cfg.SHOPEE_SECRET, endpoint: cfg.SHOPEE_ENDPOINT }),
     ml: new MercadoLivre({ clientId: cfg.ML_CLIENT_ID, clientSecret: cfg.ML_CLIENT_SECRET, refreshToken: cfg.ML_REFRESH_TOKEN, dataDir: cfg.DATA_DIR }),
-    ia: new GeradorTexto({ apiKey: cfg.ANTHROPIC_API_KEY, modelo: cfg.AI_MODEL, limiteDiario: cfg.AI_DAILY_LIMIT }),
+    ia: new GeradorTexto({
+      apiKey: cfg.ANTHROPIC_API_KEY, modelo: cfg.AI_MODEL, limiteDiario: cfg.AI_DAILY_LIMIT,
+      geminiKey: cfg.GEMINI_API_KEY, geminiModelos: cfg.GEMINI_MODELS.split(",").map((m) => m.trim()).filter(Boolean),
+    }),
     telegram: new Telegram({ token: cfg.TELEGRAM_BOT_TOKEN, dataDir: cfg.DATA_DIR }),
   };
 }

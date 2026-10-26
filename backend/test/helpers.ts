@@ -16,6 +16,8 @@ export function cfgTeste(extra: Partial<Config> = {}): Config {
     SHOPEE_ENDPOINT: "https://open-api.affiliate.shopee.com.br/graphql",
     DATA_DIR: mkdtempSync(join(tmpdir(), "afb-")),
     ANTHROPIC_API_KEY: undefined,
+    GEMINI_API_KEY: undefined,
+    GEMINI_MODELS: "gemini-flash-lite-latest",
     SHOPEE_APP_ID: undefined,
     SHOPEE_SECRET: undefined,
     ML_CLIENT_ID: undefined,

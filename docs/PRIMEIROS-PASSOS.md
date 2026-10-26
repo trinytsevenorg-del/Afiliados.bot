@@ -53,15 +53,15 @@ Guarde também o nome do canal com @ na frente: `@ofertasfulano`.
 
 Pronto: o app já cadastra produtos, publica sozinho no Telegram e abre o WhatsApp para você enviar.
 
-## Passo 4 · IA para escrever os textos (opcional, 5 min)
+## Passo 4 · IA para ler prints e escrever textos (grátis, 3 min)
 
-1. Abra **console.anthropic.com** e crie a conta.
-2. Em **Billing**, coloque um crédito pequeno (ex.: US$ 5). Sem crédito, a IA não responde.
-3. Em **API Keys** → **Create Key** → copie (começa com `sk-ant-`).
-4. No Render: serviço → **Environment** → `ANTHROPIC_API_KEY` → cole → **Save**. O Render reinicia sozinho.
-5. No app: **Ajustes → Testar todas**: a IA deve aparecer como **Configurado**.
+1. Abra **aistudio.google.com** e entre com sua conta Google.
+2. Toque em **Get API key** → **Create API key** → copie (começa com `AIza`).
+3. No Render: serviço → **Environment** → **Add Environment Variable** → `GEMINI_API_KEY` → cole → **Save**. O Render reinicia sozinho.
+4. No app: **Ajustes → Testar todas**: a IA deve aparecer como **Configurado · Gemini grátis**.
 
-Sem a IA, você escreve os textos à mão no próprio app.
+O plano grátis do Gemini tem limite por minuto e por dia (sobra para uso pessoal) e o Google pode usar o conteúdo enviado para melhorar os modelos.
+Se um dia quiser o Claude (pago): coloque `ANTHROPIC_API_KEY` no Render. Ele passa a ter prioridade sozinho.
 
 ## Passo 5 · Shopee e Mercado Livre (quando der)
 

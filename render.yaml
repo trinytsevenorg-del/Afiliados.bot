@@ -25,6 +25,8 @@ services:
       # O Render pede estes valores na hora. Pode deixar em branco e preencher depois.
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: SHOPEE_APP_ID

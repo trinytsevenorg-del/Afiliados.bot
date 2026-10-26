@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod/v4";
 import { conferirTexto, type FatosProduto } from "../lib/copyGuard.js";
+import { Gemini } from "./gemini.js";
 import { IntegracaoErro, type StatusIntegracao } from "./types.js";
 
 export const PedidoTexto = z.object({
@@ -95,15 +96,28 @@ export class GeradorTexto {
   private client: Anthropic | null;
   private uso: UsoIa = { data: "", usados: 0 };
 
+  private gemini: Gemini | null;
+
   constructor(
-    private readonly opts: { apiKey?: string; modelo: string; limiteDiario: number },
+    private readonly opts: { apiKey?: string; modelo: string; limiteDiario: number; geminiKey?: string; geminiModelos?: string[] },
     client?: Anthropic,
+    gemini?: Gemini,
   ) {
     this.client = client ?? (opts.apiKey ? new Anthropic({ apiKey: opts.apiKey, timeout: 60_000, maxRetries: 2 }) : null);
+    this.gemini = gemini ?? (opts.geminiKey ? new Gemini({ apiKey: opts.geminiKey, modelos: opts.geminiModelos ?? ["gemini-flash-lite-latest", "gemini-flash-latest"] }) : null);
   }
 
   get configurada() {
-    return this.client !== null;
+    return this.client !== null || this.gemini !== null;
+  }
+
+  /** Claude quando tem chave da Anthropic; senão o Gemini grátis. */
+  get provedor(): "claude" | "gemini" | null {
+    return this.client ? "claude" : this.gemini ? "gemini" : null;
+  }
+
+  private exigirIa() {
+    if (!this.configurada) throw new IntegracaoErro("nao_configurado", "IA não configurada (GEMINI_API_KEY ou ANTHROPIC_API_KEY)", 503);
   }
 
   usoHoje(): UsoIa {
@@ -115,6 +129,7 @@ export class GeradorTexto {
   private async chamar(pedido: PedidoTexto, correcao?: string[]): Promise<TextosGerados> {
     const conteudo = JSON.stringify(pedido);
     const extra = correcao?.length ? `\n\nA versão anterior foi recusada por: ${correcao.join("; ")}. Corrija.` : "";
+    if (!this.client) return this.gemini!.json(TextosGerados, SISTEMA, [{ text: `Dados do produto:\n${conteudo}${extra}` }]);
     let resp;
     try {
       resp = await this.client!.beta.messages.parse({
@@ -139,7 +154,7 @@ export class GeradorTexto {
   }
 
   async gerar(pedido: PedidoTexto) {
-    if (!this.client) throw new IntegracaoErro("nao_configurado", "IA não configurada (ANTHROPIC_API_KEY)", 503);
+    this.exigirIa();
     const uso = this.usoHoje();
     if (uso.usados >= this.opts.limiteDiario) throw new IntegracaoErro("limite", `Limite diário de ${this.opts.limiteDiario} gerações atingido`, 429);
     uso.usados++;
@@ -157,15 +172,22 @@ export class GeradorTexto {
     }
     if (!fatos.urgenciaFato) textos.urgencia = null;
     textos.hashtags = textos.hashtags.slice(0, 5).map((h) => "#" + h.replace(/^#+/, "").replace(/\s+/g, ""));
-    return { textos, avisos: problemas, modelo: this.opts.modelo, geradoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
+    return { textos, avisos: problemas, modelo: this.provedor === "claude" ? this.opts.modelo : "gemini", geradoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
   }
 
   /** Lê prints do anúncio e devolve só o que está escrito neles. */
   async lerPrint(pedido: PedidoPrint) {
-    if (!this.client) throw new IntegracaoErro("nao_configurado", "IA não configurada (ANTHROPIC_API_KEY)", 503);
+    this.exigirIa();
     const uso = this.usoHoje();
     if (uso.usados >= this.opts.limiteDiario) throw new IntegracaoErro("limite", `Limite diário de ${this.opts.limiteDiario} usos da IA atingido`, 429);
     uso.usados++;
+    if (!this.client) {
+      const dados = await this.gemini!.json(DadosPrint, SISTEMA_PRINT, [
+        ...pedido.imagens.map((i) => ({ inlineData: { mimeType: i.tipo, data: i.base64 } })),
+        { text: "Extraia os dados do produto destes prints." },
+      ]);
+      return { dados: limparPrint(dados), lidoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
+    }
     let resp;
     try {
       resp = await this.client.beta.messages.parse({
@@ -205,11 +227,13 @@ export class GeradorTexto {
     const uso = this.usoHoje();
     return {
       id: "ia",
-      nome: "IA de textos (Anthropic)",
+      nome: "IA (textos e leitura de print)",
       estado: ok ? "configurado" : "nao_configurado",
-      detalhe: ok ? `Modelo ${this.opts.modelo}. Usados hoje: ${uso.usados} de ${this.opts.limiteDiario}.` : "Falta ANTHROPIC_API_KEY no backend",
+      detalhe: !ok
+        ? "Falta GEMINI_API_KEY (grátis) ou ANTHROPIC_API_KEY no backend"
+        : `${this.provedor === "claude" ? `Claude (${this.opts.modelo})` : `Gemini grátis (${this.gemini!.modelos.join(", ")})`}. Usados hoje: ${uso.usados} de ${this.opts.limiteDiario}.`,
       verificadoEm: new Date().toISOString(),
-      comoConfigurar: "Crie uma chave em console.anthropic.com e coloque em ANTHROPIC_API_KEY no .env do backend. Nunca no app.",
+      comoConfigurar: "Grátis: crie uma chave em aistudio.google.com (Get API key) e coloque em GEMINI_API_KEY no Render. Pago: ANTHROPIC_API_KEY (console.anthropic.com). Nunca no app.",
       operacoes: [
         { id: "gerar_texto", descricao: "Gerar textos promocionais", implementada: true, disponivel: ok, motivo: ok ? undefined : "Não configurado" },
         { id: "ler_print", descricao: "Preencher produto pelo print do anúncio", implementada: true, disponivel: ok, motivo: ok ? undefined : "Não configurado" },

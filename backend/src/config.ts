@@ -14,6 +14,8 @@ const Env = z.object({
   ANTHROPIC_API_KEY: opcional,
   AI_MODEL: z.string().default("claude-opus-5-5"),
   AI_DAILY_LIMIT: z.coerce.number().int().min(0).default(60),
+  GEMINI_API_KEY: opcional,
+  GEMINI_MODELS: z.string().default("gemini-flash-lite-latest,gemini-flash-latest"),
   SHOPEE_APP_ID: opcional,
   SHOPEE_SECRET: opcional,
   SHOPEE_ENDPOINT: z.url().default("https://open-api.affiliate.shopee.com.br/graphql"),

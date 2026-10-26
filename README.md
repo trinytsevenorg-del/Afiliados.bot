@@ -19,10 +19,10 @@ Projeto separado da BattleHub. Não compartilha código, banco nem contas.
 |---|---|
 | Catálogo local (offline), nichos editáveis, busca e filtros | Funciona |
 | Cadastro por link (colar ou "Compartilhar" de outro app) | Funciona; valida HTTPS e o domínio, e segue links curtos pelo backend |
-| Cadastro pelo **print do anúncio** (IA lê nome, preço, % de ganho, características) | Funciona com `ANTHROPIC_API_KEY` |
+| Cadastro pelo **print do anúncio** (IA lê nome, preço, % de ganho, características) | Funciona com `GEMINI_API_KEY` (grátis) ou `ANTHROPIC_API_KEY` |
 | Cadastro manual quando a consulta falha | Funciona |
 | Detecção de produto repetido | Funciona (pelo código do produto) |
-| Textos com IA (7 versões + hashtags), editáveis, com histórico | Funciona com `ANTHROPIC_API_KEY` no backend |
+| Textos com IA (7 versões + hashtags), editáveis, com histórico | Funciona com `GEMINI_API_KEY` (grátis) ou `ANTHROPIC_API_KEY` no backend |
 | Bloqueio de texto enganoso (preço inventado, "mais barato", falsa escassez, link no texto) | Funciona (conferência no backend) |
 | Verificação de preço, validade e histórico | Shopee e ML: com credenciais. Sem elas: "Verificação indisponível" ou confirmação manual |
 | Fila com estados, revisão, agendamento e tentativas | Funciona |
@@ -40,7 +40,7 @@ Projeto separado da BattleHub. Não compartilha código, banco nem contas.
 cd backend
 cp .env.example .env      # preencha APP_TOKEN e as chaves que tiver
 npm ci
-npm test                  # 34 testes
+npm test                  # 39 testes
 npm run build && npm start
 ```
 

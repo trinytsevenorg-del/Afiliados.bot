@@ -23,7 +23,9 @@ Atualizado em 26/10/2026. Cada integração mostra o estado real em **Ajustes �
   2. Autorizar com a sua conta (fluxo `authorization_code`) e pegar o `refresh_token`.
   3. Colocar `ML_CLIENT_ID`, `ML_CLIENT_SECRET` e `ML_REFRESH_TOKEN` no `.env`. O novo refresh token fica salvo em `DATA_DIR/ml-token.json`.
 
-## IA (Anthropic)
+## IA (Gemini grátis ou Anthropic)
+
+- **Provedor:** com `ANTHROPIC_API_KEY` usa o Claude; sem ela, usa o **Gemini** (`GEMINI_API_KEY`, plano gratuito sem cartão). Modelos em `GEMINI_MODELS`; se um bater no limite (429), o próximo é usado e ele fica de fora por 10 minutos.
 
 - **Código pronto:** `POST /api/copy/generate` com saída estruturada. A IA recebe só os dados salvos do produto.
 - **Proteções:** o backend confere cada versão. Preço que não está nos dados, porcentagem sem desconto comprovado, "mais barato", falsa escassez, urgência sem fato, promessa de frete ou de ganho e link no texto fazem pedir uma correção à IA. Se o problema continuar, o texto volta com avisos em vermelho no app.
