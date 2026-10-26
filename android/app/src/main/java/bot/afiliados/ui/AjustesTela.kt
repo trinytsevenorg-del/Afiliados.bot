@@ -1,5 +1,11 @@
 package bot.afiliados.ui
 
+import androidx.compose.foundation.verticalScroll
+
+import androidx.compose.foundation.rememberScrollState
+
+import androidx.compose.foundation.layout.heightIn
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -258,10 +264,15 @@ private fun EditorCanal(app: AfiliadosApp, c: Canal, aoFechar: () -> Unit, aoSal
                     } }) { Text("Escolher grupo") }
                     erroGrupos?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                     grupos?.let { lista ->
+                        var busca by remember { mutableStateOf("") }
                         if (lista.isEmpty()) Text("Este número não está em nenhum grupo.", style = MaterialTheme.typography.bodySmall)
-                        lista.forEach { g ->
-                            TextButton(onClick = { destino = g.id; teste = g.nome; if (nome.isBlank()) nome = g.nome; grupos = null }) {
-                                Text("${g.nome} · ${g.participantes} pessoas" + if (g.souAdmin) " · admin" else " · não é admin")
+                        else Campo(busca, { busca = it }, "Buscar grupo (${lista.size})")
+                        // Lista com rolagem: com muitos grupos, os últimos sumiam do diálogo.
+                        Column(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState())) {
+                            lista.filter { busca.isBlank() || it.nome.contains(busca.trim(), ignoreCase = true) }.forEach { g ->
+                                TextButton(onClick = { destino = g.id; teste = g.nome; if (nome.isBlank()) nome = g.nome; grupos = null }) {
+                                    Text("${g.nome} · ${g.participantes} pessoas" + if (g.souAdmin) " · admin" else " · não é admin")
+                                }
                             }
                         }
                     }

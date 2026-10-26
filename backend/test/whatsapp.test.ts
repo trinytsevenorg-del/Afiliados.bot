@@ -9,10 +9,12 @@ function socketFalso() {
   const presencas: string[] = [];
   const sock = {
     ev: { on: (e: string, f: (...a: unknown[]) => void) => ee.on(e, f) },
-    user: undefined as undefined | { id: string },
+    user: undefined as undefined | { id: string; lid?: string },
     requestPairingCode: async (tel: string) => (tel.startsWith("55") ? "ABCD1234" : ""),
     groupFetchAllParticipating: async () => ({
       "111@g.us": { id: "111@g.us", subject: "Achadinhos Cozinha", participants: [{ id: "5521999998888@s.whatsapp.net", admin: "admin" }, { id: "x@s.whatsapp.net" }], announce: true },
+      "333@g.us": { id: "333@g.us", subject: "Alpha Vagas", participants: [{ id: "1@lid", admin: "superadmin" }, { id: "777000@lid" }], announce: false },
+      "222@g.us": { id: "222@g.us", subject: "test boot 1", participants: [{ id: "777000@lid", admin: "superadmin" }], announce: false },
     }),
     groupMetadata: async (jid: string) => (jid === "111@g.us" ? { id: jid } : Promise.reject(new Error("não"))),
     sendPresenceUpdate: async (t: string) => { presencas.push(t); },
@@ -31,7 +33,7 @@ async function conectado(agora = () => 1_000_000_000) {
   await new Promise((r) => setImmediate(r));
   f.ee.emit("connection.update", { qr: "qr" });
   const r = await p;
-  f.sock.user = { id: "5521999998888:3@s.whatsapp.net" };
+  f.sock.user = { id: "5521999998888:3@s.whatsapp.net", lid: "777000:3@lid" };
   f.ee.emit("connection.update", { connection: "open" });
   return { wa, f, armazem, codigo: r.codigo };
 }
@@ -69,7 +71,12 @@ describe("WhatsApp automático (número próprio)", () => {
     const { wa, codigo } = await conectado();
     expect(codigo).toBe("ABCD-1234");
     expect(wa.resumo()).toMatchObject({ estado: "conectado", numero: "5521999998888" });
-    expect(await wa.grupos()).toEqual([{ id: "111@g.us", nome: "Achadinhos Cozinha", participantes: 2, souAdmin: true, soAdminsEnviam: true }]);
+    // Os grupos do próprio número (admin, inclusive pelo id @lid) vêm primeiro.
+    expect(await wa.grupos()).toEqual([
+      { id: "111@g.us", nome: "Achadinhos Cozinha", participantes: 2, souAdmin: true, soAdminsEnviam: true },
+      { id: "222@g.us", nome: "test boot 1", participantes: 1, souAdmin: true, soAdminsEnviam: false },
+      { id: "333@g.us", nome: "Alpha Vagas", participantes: 2, souAdmin: false, soAdminsEnviam: false },
+    ]);
   });
 
   it("recusa telefone fora do formato", async () => {

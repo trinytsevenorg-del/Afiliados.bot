@@ -309,16 +309,19 @@ export class WhatsApp {
   async grupos() {
     const sock = this.exigirConectado();
     const todos = await sock.groupFetchAllParticipating();
-    const eu = sock.user?.id?.split(":")[0];
+    // O WhatsApp identifica a pessoa pelo número (@s.whatsapp.net) ou por um id anônimo (@lid).
+    const num = (j?: string | null) => j?.split("@")[0]?.split(":")[0] || undefined;
+    const eu = new Set([num(sock.user?.id), num((sock.user as { lid?: string } | undefined)?.lid)].filter(Boolean));
     return Object.values(todos)
       .map((g) => ({
         id: g.id,
         nome: g.subject,
         participantes: g.participants.length,
-        souAdmin: g.participants.some((p) => p.id.split(":")[0]?.split("@")[0] === eu?.split("@")[0] && !!p.admin),
+        souAdmin: g.participants.some((p) => !!p.admin && [p.id, p.lid, p.jid].some((j) => eu.has(num(j)))),
         soAdminsEnviam: !!g.announce,
       }))
-      .sort((x, y) => x.nome.localeCompare(y.nome));
+      // Os grupos em que o número é admin (os seus) vêm primeiro.
+      .sort((x, y) => Number(y.souAdmin) - Number(x.souAdmin) || x.nome.localeCompare(y.nome, "pt-BR", { sensitivity: "base" }));
   }
 
   async publicar(p: { chave: string; grupo: string; texto: string; foto?: { tipo: string; base64: string } | null }) {
