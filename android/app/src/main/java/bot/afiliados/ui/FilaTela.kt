@@ -83,6 +83,18 @@ fun FilaTela(app: AfiliadosApp, nav: NavHostController) {
         })
     }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = espaco, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val prontosTelegram = fila.count { it.estado == EstadoFila.PRONTO && canais.firstOrNull { c -> c.id == it.canalId }?.tipo == TipoCanal.TELEGRAM }
+            if (prontosTelegram > 0) item {
+                val ctx = LocalContext.current
+                Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                    escopo.launch {
+                        val itens = app.repo.agendarEmSequencia(app.repo.prontosAutomaticos(), app.prefs.intervaloMinutos)
+                        itens.forEach { PublicarWorker.agendar(ctx, it, true, ExistingWorkPolicy.REPLACE) }
+                        ctx.avisar("${itens.size} ofertas agendadas: uma a cada ${app.prefs.intervaloMinutos} min")
+                    }
+                }) { Text("🚀 Publicar todos no Telegram ($prontosTelegram)") }
+                Text("Começa em 1 minuto e segue um a cada ${app.prefs.intervaloMinutos} min (mude em Ajustes).", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (lista.isEmpty()) item {
                 EstadoVazio("Fila vazia", "Crie uma oferta a partir de um produto e adicione à fila.") { Button(onClick = { nav.irPara(Rotas.oferta()) }) { Text("Criar oferta") } }
             }

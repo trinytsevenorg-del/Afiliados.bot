@@ -74,15 +74,7 @@ fun OfertaTela(app: AfiliadosApp, nav: NavHostController, produtoInicial: Long?)
 
     val atual = textos.firstOrNull { it.id == textoId } ?: textos.firstOrNull()
     // Modelo: preços, cupom e link vêm do produto (nunca da IA); a IA só dá o título.
-    fun textoModelo() = produto?.let { p ->
-        bot.afiliados.domain.Mensagem.aplicarModelo(
-            app.prefs.modeloMensagem,
-            titulo = atual?.titulo?.ifBlank { null } ?: p.nome.take(70),
-            de = p.precoAnterior.takeIf { p.precoAnteriorComprovado && (p.preco == null || (p.precoAnterior ?: 0.0) > p.preco) },
-            por = p.preco,
-            cupom = p.cupom?.ifBlank { null } ?: app.prefs.cupomPadrao.ifBlank { null },
-        )
-    }.orEmpty()
+    fun textoModelo() = produto?.let { repo.textoModelo(it, atual?.titulo) }.orEmpty()
     LaunchedEffect(atual?.id, versao, produto) {
         if (editado) return@LaunchedEffect
         if (versao == Versao.MODELO) texto = textoModelo()

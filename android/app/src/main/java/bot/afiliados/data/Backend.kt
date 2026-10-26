@@ -80,7 +80,7 @@ data class Textos(
 @Serializable data class DestinoTelegram(val id: String, val titulo: String? = null, val tipo: String)
 
 @Serializable data class ImagemPrint(val tipo: String, val base64: String)
-@Serializable data class PedidoPrint(val imagens: List<ImagemPrint>)
+@Serializable data class PedidoPrint(val imagens: List<ImagemPrint>, val nichos: List<String> = emptyList())
 @Serializable
 data class DadosPrint(
     val marketplace: String = "desconhecido",
@@ -93,6 +93,7 @@ data class DadosPrint(
     val avaliacao: Double? = null,
     val foto: FotoPrint? = null,
     val cupom: String? = null,
+    val nicho: String? = null,
     val avisos: List<String> = emptyList(),
 )
 @Serializable data class FotoPrint(val imagem: Int, val caixa: List<Double>)
@@ -154,7 +155,7 @@ class Backend(
     suspend fun linkShopee(url: String, subId: String) = chamar("POST", "/api/shopee/affiliate-link", corpo(ComSubIds(url, listOf(subId).filter { it.isNotBlank() }), ComSubIds.serializer()), LinkAfiliado.serializer())
     suspend fun produtoMl(itemId: String) = chamar("POST", "/api/ml/product", corpo(ComItem(itemId), ComItem.serializer()), DadosProduto.serializer())
     suspend fun gerarTexto(p: PedidoTexto) = chamar("POST", "/api/copy/generate", corpo(p, PedidoTexto.serializer()), RespostaTexto.serializer())
-    suspend fun lerPrint(imagens: List<ImagemPrint>) = chamar("POST", "/api/product/from-images", corpo(PedidoPrint(imagens), PedidoPrint.serializer()), RespostaPrint.serializer())
+    suspend fun lerPrint(imagens: List<ImagemPrint>, nichos: List<String> = emptyList()) = chamar("POST", "/api/product/from-images", corpo(PedidoPrint(imagens, nichos), PedidoPrint.serializer()), RespostaPrint.serializer())
     suspend fun publicarTelegram(p: PedidoTelegram) = chamar("POST", "/api/publish/telegram", corpo(p, PedidoTelegram.serializer()), RespostaTelegram.serializer())
     suspend fun testarTelegram(chatId: String) = chamar("POST", "/api/telegram/test-destination", corpo(ComChat(chatId), ComChat.serializer()), DestinoTelegram.serializer())
 }

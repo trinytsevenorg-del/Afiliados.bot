@@ -5,10 +5,12 @@ import bot.afiliados.domain.EstadoFila
 import bot.afiliados.domain.Fila
 import bot.afiliados.domain.Links
 import bot.afiliados.domain.Marketplace
+import bot.afiliados.domain.Mensagem
 import bot.afiliados.domain.Precos
 import bot.afiliados.domain.SituacaoLink
 import bot.afiliados.domain.SituacaoPreco
 import bot.afiliados.domain.TipoCanal
+import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -244,6 +246,87 @@ class Repositorio(
 
     suspend fun salvarTextoManual(produtoId: Long, texto: String) =
         dao.inserir(TextoPromocional(produtoId = produtoId, whatsapp = texto, canal = texto, objetiva = texto, origem = "manual", criadoEm = agora()))
+
+    // ---------- Modelo e lote ----------
+
+    /** Mensagem no modelo: preços, cupom e link vêm do produto; o título pode vir da IA. */
+    fun textoModelo(p: Produto, titulo: String?): String = Mensagem.aplicarModelo(
+        prefs.modeloMensagem,
+        titulo = titulo?.ifBlank { null } ?: p.nome.take(70),
+        de = p.precoAnterior.takeIf { p.precoAnteriorComprovado && (p.preco == null || (p.precoAnterior ?: 0.0) > p.preco) },
+        por = p.preco,
+        cupom = p.cupom?.ifBlank { null } ?: prefs.cupomPadrao.ifBlank { null },
+    )
+
+    /**
+     * Um print = um produto. Lê com a IA, recorta a foto, reconhece o nicho,
+     * salva sem link e já pede o título. Devolve o id do produto.
+     */
+    suspend fun produtoDoPrint(ctx: android.content.Context, uri: android.net.Uri): Long {
+        val nichos = dao.nichosLista()
+        val img = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Imagens.paraPrint(ctx.contentResolver, uri) }
+        val d = backend.lerPrint(listOf(img), nichos.map { it.nome }).dados
+        val nome = d.nome ?: throw IllegalStateException("A IA não achou o nome do produto neste print")
+        val foto = d.foto?.let { f ->
+            runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Fotos.recortar(ctx, uri, f.caixa) } }.getOrNull()
+        }
+        val mp = when (d.marketplace) { "shopee" -> Marketplace.SHOPEE; "mercadolivre" -> Marketplace.MERCADO_LIVRE; else -> Marketplace.OUTRO }
+        val caracteristicas = d.caracteristicas + listOfNotNull(d.avaliacao?.let { "Nota ${it.toString().replace('.', ',')} de 5" })
+        val p = Produto(
+            nome = nome, linkOriginal = "", chave = "print:" + UUID.randomUUID(), marketplace = mp,
+            nichoId = nichos.firstOrNull { it.nome == d.nicho }?.id,
+            preco = d.preco, precoAnterior = d.precoAnterior, precoAnteriorComprovado = d.precoAnterior != null,
+            comissaoPercentual = d.comissaoPercentual, comissaoOrigem = d.comissaoPercentual?.let { "print" },
+            fotoLocal = foto, descricaoOriginal = d.descricao.orEmpty(), caracteristicas = caracteristicas.joinToString("\n"),
+            cupom = d.cupom,
+            // Preço lido do print que você mesmo tirou agora conta como conferido por você.
+            situacaoPreco = if (d.preco != null) SituacaoPreco.VERIFICADO_MANUAL else SituacaoPreco.NUNCA_VERIFICADO,
+            ultimaVerificacao = d.preco?.let { agora() }, fontePreco = d.preco?.let { "print" },
+        )
+        val id = salvarNovo(p, if (d.preco != null) "print" else null, SituacaoPreco.VERIFICADO_MANUAL)
+        // Título pela IA; se falhar, a mensagem usa o nome.
+        runCatching { gerarTexto(dao.produtoAgora(id)!!, "telegram", null) }
+        return id
+    }
+
+    /** Produtos do lote que ainda esperam o link de afiliado. */
+    fun semLink() = dao.produtos().map { l -> l.filter { it.linkAfiliado == null } }
+
+    /** Cola o link e já deixa a oferta pronta na fila, no canal do nicho. */
+    suspend fun liberarComLink(p: Produto, link: String): ResultadoFila {
+        // A loja às vezes copia uma frase junto ("Olha isso: https://..."): fica só o link.
+        val v = Links.validar(Links.extrairDeTexto(link) ?: link, exigirConhecido = false)
+        if (v !is Links.Resultado.Ok) return ResultadoFila.SemLink((v as Links.Resultado.Erro).motivo)
+        val atualizado = p.copy(linkAfiliado = v.url, linkAfiliadoOrigem = "manual", linkOriginal = p.linkOriginal.ifBlank { v.url },
+            marketplace = if (p.marketplace == Marketplace.OUTRO) v.marketplace else p.marketplace, atualizadoEm = agora())
+        dao.atualizar(atualizado)
+        val canalId = atualizado.nichoId?.let { dao.nicho(it) }?.canalId
+        val titulo = dao.textosLista().filter { it.produtoId == p.id }.maxByOrNull { it.criadoEm }?.titulo
+        val r = adicionarAFila(atualizado, textoModelo(atualizado, titulo), "", canalId)
+        if (r is ResultadoFila.Criado) {
+            val item = dao.itemAgora(r.id)!!
+            if (Fila.bloqueios(item.texto, item.link, situacaoPreco(atualizado), false).isEmpty()) dao.mudarEstado(item, EstadoFila.PRONTO, "Pronto (lote)")
+        }
+        return r
+    }
+
+    /** Itens prontos que vão sozinhos (Telegram), na ordem da fila. */
+    suspend fun prontosAutomaticos(): List<ItemFila> {
+        val canais = dao.canaisLista().associateBy { it.id }
+        return dao.itensNoEstado(EstadoFila.PRONTO).filter { i -> i.canalId?.let { canais[it] }?.let { it.tipo == TipoCanal.TELEGRAM && it.ativo } == true }
+            .sortedWith(compareBy({ it.ordem }, { it.criadoEm }))
+    }
+
+    /** Agenda em sequência: o primeiro agora, os outros a cada [intervaloMin] minutos. */
+    suspend fun agendarEmSequencia(itens: List<ItemFila>, intervaloMin: Int): List<ItemFila> {
+        val inicio = agora() + 60_000
+        val feitos = itens.mapIndexed { i, item ->
+            val comHora = item.copy(planejadoPara = inicio + i * intervaloMin * 60_000L).also { dao.atualizar(it) }
+            dao.mudarEstado(comHora, EstadoFila.AGENDADO, "Agendado em lote")
+        }
+        if (feitos.isNotEmpty()) registrar("fila", "Agendou ${feitos.size} ofertas, uma a cada $intervaloMin min")
+        return feitos
+    }
 
     // ---------- Fila ----------
 

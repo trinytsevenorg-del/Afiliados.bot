@@ -66,7 +66,8 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
   });
 
   const geral = limitador(120);
-  const ia = limitador(10);
+  // Um lote de prints chama a IA várias vezes seguidas.
+  const ia = limitador(40);
 
   app.addHook("onRequest", async (req, reply) => {
     if (!geral(req.ip)) return reply.code(429).send({ erro: "limite", mensagem: "Muitas requisições. Espere um minuto." });

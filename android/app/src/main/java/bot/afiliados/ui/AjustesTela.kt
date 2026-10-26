@@ -158,6 +158,8 @@ fun AjustesTela(app: AfiliadosApp, nav: NavHostController) {
         item {
             Secao("Preços e links") {
                 Campo(validade, { validade = it.filter(Char::isDigit).take(3) }, "Validade do preço (horas)", numero = true, ajuda = "Depois disso, o preço precisa ser verificado de novo")
+                var intervalo by remember { mutableStateOf(app.prefs.intervaloMinutos.toString()) }
+                Campo(intervalo, { intervalo = it.filter(Char::isDigit).take(3); intervalo.toIntOrNull()?.let { m -> app.prefs.intervaloMinutos = m } }, "Intervalo do Publicar todos (minutos)", numero = true, ajuda = "Tempo entre uma oferta e outra no Telegram")
                 Campo(subId, { subId = it }, "Sub ID nos links da Shopee", ajuda = "Ajuda a saber de onde veio a venda no painel da Shopee")
                 Button(onClick = {
                     app.prefs.validadePrecoHoras = validade.toIntOrNull() ?: 6

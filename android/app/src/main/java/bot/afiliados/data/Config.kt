@@ -82,6 +82,11 @@ class Preferencias(ctx: Context) {
         get() = p.getString("cupomPadrao", "") ?: ""
         set(v) = p.edit().putString("cupomPadrao", v.trim().uppercase().filter { it.isLetterOrDigit() || it == '_' || it == '-' }.take(30)).apply()
 
+    /** Minutos entre uma publicação e outra no "Publicar todos". */
+    var intervaloMinutos: Int
+        get() = p.getInt("intervaloMinutos", 15)
+        set(v) = p.edit().putInt("intervaloMinutos", v.coerceIn(1, 240)).apply()
+
     var bloqueioLocal: Boolean
         get() = p.getBoolean("bloqueioLocal", false)
         set(v) = p.edit().putBoolean("bloqueioLocal", v).apply()

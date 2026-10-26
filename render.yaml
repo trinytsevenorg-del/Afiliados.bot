@@ -21,7 +21,7 @@ services:
       - key: AI_MODEL
         value: claude-opus-5-5
       - key: AI_DAILY_LIMIT
-        value: "60"
+        value: "300"
       # O Render pede estes valores na hora. Pode deixar em branco e preencher depois.
       - key: TELEGRAM_BOT_TOKEN
         sync: false

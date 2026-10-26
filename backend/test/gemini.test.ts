@@ -6,7 +6,7 @@ import { fakeFetch, json } from "./helpers.js";
 const resposta = (obj: unknown) => json({ candidates: [{ content: { parts: [{ text: JSON.stringify(obj) }] } }] });
 const print = {
   marketplace: "mercadolivre", nome: "Torneira Gourmet Preta", preco: 34.94, precoAnterior: 60.25, comissaoPercentual: 17,
-  caracteristicas: ["Cor e Acabamento: Preto | Parede", "Frete grátis acima de R$ 19"], descricao: null, avaliacao: 4.8, urgencia: null, cupom: null, foto: { imagem: 0, caixa: [40, 0, 460, 1000] }, avisos: [],
+  caracteristicas: ["Cor e Acabamento: Preto | Parede", "Frete grátis acima de R$ 19"], descricao: null, avaliacao: 4.8, urgencia: null, nicho: null, cupom: null, foto: { imagem: 0, caixa: [40, 0, 460, 1000] }, avisos: [],
 };
 
 describe("Gemini (grátis)", () => {
@@ -14,13 +14,24 @@ describe("Gemini (grátis)", () => {
     const { f, chamadas } = fakeFetch(() => resposta(print));
     const ia = new GeradorTexto({ modelo: "m", limiteDiario: 5 }, undefined, new Gemini({ apiKey: "AIza-teste", modelos: ["gemini-flash-lite-latest"] }, f));
     expect(ia.provedor).toBe("gemini");
-    const r = await ia.lerPrint({ imagens: [{ tipo: "image/jpeg", base64: "A".repeat(200) }] });
+    const r = await ia.lerPrint({ imagens: [{ tipo: "image/jpeg", base64: "A".repeat(200) }], nichos: [] });
     expect(r.dados).toMatchObject({ preco: 34.94, precoAnterior: 60.25, comissaoPercentual: 17 });
     expect(chamadas[0]!.url).toContain("/models/gemini-flash-lite-latest:generateContent");
     expect((chamadas[0]!.init.headers as Record<string, string>)["x-goog-api-key"]).toBe("AIza-teste");
     const corpo = JSON.parse(String(chamadas[0]!.init.body));
     expect(corpo.contents[0].parts[0].inlineData.mimeType).toBe("image/jpeg");
     expect(ia.status().detalhe).toMatch(/Gemini grátis/);
+  });
+
+  it("reconhece o nicho só entre os do app", async () => {
+    const { f, chamadas } = fakeFetch(() => resposta({ ...print, nicho: "cozinha e utilidades" }));
+    const ia = new GeradorTexto({ modelo: "m", limiteDiario: 5 }, undefined, new Gemini({ apiKey: "k", modelos: ["m"] }, f));
+    const r = await ia.lerPrint({ imagens: [{ tipo: "image/jpeg", base64: "A".repeat(200) }], nichos: ["Tecnologia e eletrônicos", "Cozinha e utilidades"] });
+    expect(r.dados.nicho).toBe("Cozinha e utilidades");
+    expect(JSON.stringify(JSON.parse(String(chamadas[0]!.init.body)).contents)).toContain("Cozinha e utilidades");
+    const { f: f2 } = fakeFetch(() => resposta({ ...print, nicho: "Pets" }));
+    const ia2 = new GeradorTexto({ modelo: "m", limiteDiario: 5 }, undefined, new Gemini({ apiKey: "k", modelos: ["m"] }, f2));
+    expect((await ia2.lerPrint({ imagens: [{ tipo: "image/jpeg", base64: "A".repeat(200) }], nichos: ["Cozinha e utilidades"] })).dados.nicho).toBeNull();
   });
 
   it("limite do plano grátis (429) passa para o próximo modelo", async () => {

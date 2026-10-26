@@ -66,6 +66,7 @@ fun InicioTela(app: AfiliadosApp, nav: NavHostController) {
         item {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Atalho("Novo produto", Icons.Outlined.AddLink) { nav.irPara(Rotas.novoProduto()) }
+                Atalho("Lote de prints", Icons.Outlined.AutoAwesome) { nav.irPara("lote") }
                 Atalho("Criar oferta", Icons.Outlined.AutoAwesome) { nav.irPara(Rotas.oferta()) }
                 Atalho("Catálogo", Icons.Outlined.Inventory2) { nav.irPara("produtos") }
                 Atalho("Fila", Icons.Outlined.Schedule) { nav.irPara("fila") }

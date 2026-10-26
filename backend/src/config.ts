@@ -13,7 +13,7 @@ const Env = z.object({
   APP_TOKEN: z.string().min(32, "APP_TOKEN precisa de pelo menos 32 caracteres"),
   ANTHROPIC_API_KEY: opcional,
   AI_MODEL: z.string().default("claude-opus-5-5"),
-  AI_DAILY_LIMIT: z.coerce.number().int().min(0).default(60),
+  AI_DAILY_LIMIT: z.coerce.number().int().min(0).default(300),
   GEMINI_API_KEY: opcional,
   GEMINI_MODELS: z.string().default("gemini-flash-lite-latest,gemini-flash-latest"),
   SHOPEE_APP_ID: opcional,

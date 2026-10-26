@@ -58,6 +58,8 @@ export const PedidoPrint = z.object({
     )
     .min(1)
     .max(10),
+  /** Nichos do app: a IA escolhe um deles (ou nenhum). */
+  nichos: z.array(z.string().trim().min(1).max(60)).max(30).default([]),
 });
 export type PedidoPrint = z.infer<typeof PedidoPrint>;
 
@@ -71,6 +73,7 @@ export const DadosPrint = z.object({
   descricao: z.string().nullable().describe("Trecho da descrição visível, se houver"),
   avaliacao: z.number().nullable().describe("Nota média visível (ex.: 4.8), se houver"),
   urgencia: z.string().nullable().describe("Prazo de oferta escrito na tela (ex.: 'termina em 2h'), se houver"),
+  nicho: z.string().nullable().describe("Nome EXATO de um dos nichos da lista enviada que melhor combina com o produto. Null se nenhum combinar ou se não houver lista"),
   cupom: z.string().nullable().describe("CÓDIGO de cupom escrito na tela (ex.: 'Use o cupom PROMO10' → PROMO10). Null se não houver um código. Desconto sem código não conta"),
   foto: z
     .object({
@@ -95,6 +98,11 @@ Regras que não podem ser quebradas:
 - Características: copie as que estão escritas (cor, medidas, material, voltagem, selos, frete, loja oficial). Não liste meios de pagamento.
 - Se alguma imagem parecer de outro produto, ignore-a e avise.
 - Foto: marque o retângulo só da foto principal do produto, sem barra de status, botões, selos ou textos por cima.`;
+
+function instrucaoPrint(nichos: string[]) {
+  const lista = nichos.length ? `\nNichos disponíveis (escolha um, com o nome exato, ou null): ${nichos.map((n) => `"${n}"`).join(", ")}.` : "";
+  return `Extraia os dados do produto destes prints.${lista}`;
+}
 
 export interface UsoIa {
   data: string;
@@ -185,7 +193,7 @@ export class GeradorTexto {
   }
 
   /** Lê prints do anúncio e devolve só o que está escrito neles. */
-  async lerPrint(pedido: PedidoPrint) {
+  async lerPrint(pedido: z.input<typeof PedidoPrint>) {
     this.exigirIa();
     const uso = this.usoHoje();
     if (uso.usados >= this.opts.limiteDiario) throw new IntegracaoErro("limite", `Limite diário de ${this.opts.limiteDiario} usos da IA atingido`, 429);
@@ -193,9 +201,9 @@ export class GeradorTexto {
     if (!this.client) {
       const dados = await this.gemini!.json(DadosPrint, SISTEMA_PRINT, [
         ...pedido.imagens.map((i) => ({ inlineData: { mimeType: i.tipo, data: i.base64 } })),
-        { text: "Extraia os dados do produto destes prints." },
+        { text: instrucaoPrint(pedido.nichos ?? []) },
       ]);
-      return { dados: limparPrint(dados, pedido.imagens.length), lidoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
+      return { dados: limparPrint(dados, pedido.imagens.length, pedido.nichos ?? []), lidoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
     }
     let resp;
     try {
@@ -210,7 +218,7 @@ export class GeradorTexto {
           role: "user",
           content: [
             ...pedido.imagens.map((i) => ({ type: "image" as const, source: { type: "base64" as const, media_type: i.tipo, data: i.base64 } })),
-            { type: "text" as const, text: "Extraia os dados do produto destes prints." },
+            { type: "text" as const, text: instrucaoPrint(pedido.nichos ?? []) },
           ],
         }],
       });
@@ -223,7 +231,7 @@ export class GeradorTexto {
     }
     if (resp.stop_reason === "refusal") throw new IntegracaoErro("indisponivel", "A IA recusou ler este print. Preencha à mão.", 422);
     if (!resp.parsed_output) throw new IntegracaoErro("resposta_invalida", "A IA não devolveu o formato esperado", 502);
-    return { dados: limparPrint(resp.parsed_output, pedido.imagens.length), lidoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
+    return { dados: limparPrint(resp.parsed_output, pedido.imagens.length, pedido.nichos ?? []), lidoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
   }
 
   private conferir(t: TextosGerados, f: FatosProduto) {
@@ -252,7 +260,7 @@ export class GeradorTexto {
 }
 
 /** Descarta valores impossíveis em vez de passar adiante um número errado. */
-export function limparPrint(d: DadosPrint, nImagens = 1): DadosPrint {
+export function limparPrint(d: DadosPrint, nImagens = 1, nichos: string[] = []): DadosPrint {
   const avisos = [...d.avisos];
   const valor = (n: number | null, nome: string) => {
     if (n === null) return null;
@@ -281,6 +289,8 @@ export function limparPrint(d: DadosPrint, nImagens = 1): DadosPrint {
   return {
     ...d,
     nome: d.nome?.trim().slice(0, 200) || null,
+    // Nicho só vale se for um da lista (sem diferença de maiúsculas).
+    nicho: nichos.find((n) => n.toLowerCase() === d.nicho?.trim().toLowerCase()) ?? null,
     cupom: /^[A-Za-z0-9_-]{3,30}$/.test(d.cupom?.trim() ?? "") ? d.cupom!.trim().toUpperCase() : null,
     preco,
     precoAnterior,

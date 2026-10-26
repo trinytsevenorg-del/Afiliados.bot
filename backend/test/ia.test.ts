@@ -88,7 +88,7 @@ describe("leitura de print", () => {
   const img = { tipo: "image/jpeg" as const, base64: "A".repeat(200) };
   const dados = {
     marketplace: "mercadolivre", nome: " Fone Bluetooth ", preco: 59.9, precoAnterior: 99.9, comissaoPercentual: 17,
-    caracteristicas: ["Bluetooth 5.3", ""], descricao: null, avaliacao: 4.8, urgencia: null, cupom: null, foto: null, avisos: [],
+    caracteristicas: ["Bluetooth 5.3", ""], descricao: null, avaliacao: 4.8, urgencia: null, nicho: null, cupom: null, foto: null, avisos: [],
   };
   function cliente(saida: Record<string, unknown>) {
     const pedidos: any[] = [];

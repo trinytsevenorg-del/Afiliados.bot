@@ -119,6 +119,7 @@ fun AppRaiz(app: AfiliadosApp, atividade: MainActivity, desbloqueado: Boolean, a
                 composable("fila") { FilaTela(app, nav) }
                 composable("ajustes") { AjustesTela(app, nav) }
                 composable("comissoes") { ComissoesTela(app, nav) }
+                composable("lote") { LoteTela(app, nav) }
                 composable("novo-produto?link={link}", arguments = listOf(navArgument("link") { type = NavType.StringType; nullable = true; defaultValue = null })) {
                     ProdutoFormTela(app, nav, produtoId = null, linkInicial = it.arguments?.getString("link"))
                 }

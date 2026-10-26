@@ -133,7 +133,9 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
         lendoPrint = true
         try {
             val imagens = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { uris.take(10).map { bot.afiliados.data.Imagens.paraPrint(cr, it) } }
-            val d = repo.backend.lerPrint(imagens).dados
+            val nichos = repo.dao.nichosLista()
+            val d = repo.backend.lerPrint(imagens, nichos.map { it.nome }).dados
+            if (nichoId == null) nichos.firstOrNull { it.nome == d.nicho }?.let { nichoId = it.id }
             d.nome?.let { nome = it }
             d.cupom?.let { cupom = it }
             // Recorta a foto do produto do próprio print (a IA só diz onde ela está).

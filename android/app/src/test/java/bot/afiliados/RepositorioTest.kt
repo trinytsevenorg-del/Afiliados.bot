@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
+@org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 class RepositorioTest {
     private lateinit var srv: MockWebServer
     private lateinit var banco: BancoAfiliados
@@ -109,6 +110,47 @@ class RepositorioTest {
         assertEquals(EstadoFila.PUBLICADO_CONFIRMADO, repo.publicarAutomatico(id))
         val corpo = srv.takeRequest().body.readUtf8()
         assertEquals(3, Regex("\"tipo\":\"image/jpeg\"").findAll(corpo).count())
+    }
+
+    @Test fun loteDoPrintAteOAgendamentoEmSequencia() = runBlocking {
+        val ctx = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val dao = banco.dao()
+        val cozinha = dao.inserir(bot.afiliados.data.Nicho(nome = "Cozinha e utilidades"))
+        val canal = dao.inserir(Canal(nome = "Tg", tipo = TipoCanal.TELEGRAM, destino = "@meucanal"))
+        dao.atualizar(dao.nicho(cozinha)!!.copy(canalId = canal))
+        val bmp = android.graphics.Bitmap.createBitmap(400, 800, android.graphics.Bitmap.Config.ARGB_8888)
+        val arq = java.io.File(ctx.cacheDir, "lote.png").apply { outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) } }
+        srv.enqueue(MockResponse().setBody("""{"dados":{"marketplace":"mercadolivre","nome":"Torneira Gourmet","preco":34.94,"precoAnterior":60.25,"comissaoPercentual":17,"caracteristicas":["Preto"],"nicho":"Cozinha e utilidades","cupom":null,"avisos":[]}}"""))
+        srv.enqueue(MockResponse().setBody("""{"textos":{"titulo":"Torneira Gourmet: luxo na cozinha! ✨","whatsapp":"x","canal":"x","descricao":"x","cta":"x","objetiva":"x","chamativa":"x"},"modelo":"gemini"}"""))
+        val id = repo.produtoDoPrint(ctx, android.net.Uri.fromFile(arq))
+        val p = dao.produtoAgora(id)!!
+        assertEquals(cozinha, p.nichoId)
+        assertEquals(null, p.linkAfiliado)
+        assertTrue(srv.takeRequest().body.readUtf8().contains("Cozinha e utilidades"))
+
+        val r = repo.liberarComLink(p, "Olha: https://meli.la/abc")
+        assertTrue(r is Repositorio.ResultadoFila.Criado)
+        val item = dao.itemAgora((r as Repositorio.ResultadoFila.Criado).id)!!
+        assertEquals(EstadoFila.PRONTO, item.estado)
+        assertEquals(canal, item.canalId)
+        assertTrue(item.texto.startsWith("💥 Torneira Gourmet: luxo na cozinha!"))
+        assertTrue(item.texto.contains("~R$ 60,25~") && item.texto.contains("*R$ 34,94*"))
+
+        val agendados = repo.agendarEmSequencia(repo.prontosAutomaticos(), 15)
+        assertEquals(1, agendados.size)
+        assertEquals(EstadoFila.AGENDADO, agendados[0].estado)
+    }
+
+    @Test fun agendamentoEmSequenciaEspacaPeloIntervalo() = runBlocking {
+        val dao = banco.dao()
+        val cid = dao.inserir(Canal(nome = "Tg", tipo = TipoCanal.TELEGRAM, destino = "@meucanal"))
+        val itens = (1..3).map { i ->
+            val pid = repo.salvarNovo(produto(chave = "k$i"), null)
+            val r = repo.adicionarAFila(dao.produtoAgora(pid)!!, "t$i", "", cid) as Repositorio.ResultadoFila.Criado
+            repo.mudar(dao.itemAgora(r.id)!!, EstadoFila.PRONTO)
+        }
+        val ag = repo.agendarEmSequencia(itens, 15)
+        assertEquals(listOf(0L, 15L, 30L), ag.map { (it.planejadoPara!! - ag[0].planejadoPara!!) / 60_000 })
     }
 
     @Test fun precoVencidoParaAPublicacaoSemChamarARede() = runBlocking {

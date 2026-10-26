@@ -18,7 +18,17 @@
    - "Telegram (automático)": `@seucanal` com o bot como administrador.
 6. **Nichos:** já vêm 8. Toque num nicho para mudar nome, ícone, tom do texto e canal padrão.
 
-## Parte 2 · Cadastrar um produto
+## Parte 2 · Cadastrar produtos
+
+### Em lote (vários de uma vez)
+
+1. Na loja, tire **1 print de cada produto** (com GANHOS e o preço aparecendo).
+2. No app: **Início → Lote de prints → Escolher prints** (até 30). A IA lê cada um, recorta a foto, **escolhe o nicho** e escreve o título.
+3. Em **Colar os links**: para cada produto, copie o link na loja (GANHOS → copiar) e toque em **📋 Colar link**. A oferta vai pronta para a fila, no canal do nicho.
+4. Na **Fila**, toque em **🚀 Publicar todos no Telegram**: um a cada 15 minutos (mude em Ajustes).
+
+**Um canal por nicho:** crie os canais no Telegram, ponha o **mesmo bot** como admin em todos, cadastre em Ajustes → Canais e escolha o canal padrão em cada nicho.
+
 
 ### Jeito mais rápido: pelo print (precisa da IA ligada)
 
