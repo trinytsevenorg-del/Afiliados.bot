@@ -24,6 +24,7 @@ class MainActivity : FragmentActivity() {
     /** Link recebido pelo "Compartilhar" de outro app, ou item vindo de notificação. */
     val linkRecebido = mutableStateOf<String?>(null)
     val itemAberto = mutableStateOf<Long?>(null)
+    val printRecebido = mutableStateOf(false)
     private val desbloqueado = mutableStateOf(false)
 
     private val pedirNotificacao = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -56,6 +57,12 @@ class MainActivity : FragmentActivity() {
 
     private fun lerIntent(i: Intent?) {
         if (i == null) return
+        val tipo = i.type.orEmpty()
+        if ((i.action == Intent.ACTION_SEND || i.action == Intent.ACTION_SEND_MULTIPLE) && tipo.startsWith("image/")) {
+            val uris = if (i.action == Intent.ACTION_SEND_MULTIPLE) i.extras?.let { androidx.core.content.IntentCompat.getParcelableArrayListExtra(i, Intent.EXTRA_STREAM, android.net.Uri::class.java) }.orEmpty()
+            else listOfNotNull(androidx.core.content.IntentCompat.getParcelableExtra(i, Intent.EXTRA_STREAM, android.net.Uri::class.java))
+            if (uris.isNotEmpty()) { (application as AfiliadosApp).printPendente.value = uris.take(3); printRecebido.value = true }
+        }
         if (i.action == Intent.ACTION_SEND && i.type == "text/plain") {
             linkRecebido.value = i.getStringExtra(Intent.EXTRA_TEXT)?.let { Links.extrairDeTexto(it) }
         }

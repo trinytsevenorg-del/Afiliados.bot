@@ -30,6 +30,15 @@ describe("acesso", () => {
     expect(grande.statusCode).toBe(413);
   });
 
+  it("rota de print aceita imagem grande e recusa arquivo que não é imagem", async () => {
+    const a = await app();
+    const grande = { imagens: [{ tipo: "image/jpeg", base64: "A".repeat(3_000_000) }] };
+    const r = await a.inject({ method: "POST", url: "/api/product/from-images", headers: auth, payload: grande });
+    expect(r.statusCode).toBe(503); // passou do limite de tamanho; só falta a chave da IA
+    const ruim = await a.inject({ method: "POST", url: "/api/product/from-images", headers: auth, payload: { imagens: [{ tipo: "application/pdf", base64: "A".repeat(200) }] } });
+    expect(ruim.statusCode).toBe(400);
+  });
+
   it("link de domínio estranho dá erro claro", async () => {
     const a = await app();
     const r = await a.inject({ method: "POST", url: "/api/links/analyze", headers: auth, payload: { url: "https://golpe.example/x" } });

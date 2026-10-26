@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
-import { GeradorTexto, type TextosGerados } from "../src/integrations/ai.js";
+import { GeradorTexto, limparPrint, type TextosGerados } from "../src/integrations/ai.js";
 import { conferirTexto } from "../src/lib/copyGuard.js";
 
 const base: TextosGerados = {
@@ -81,5 +81,37 @@ describe("GeradorTexto", () => {
     const g = new GeradorTexto({ modelo: "m", limiteDiario: 1 }, client);
     await g.gerar(produto as never);
     await expect(g.gerar(produto as never)).rejects.toMatchObject({ codigo: "limite" });
+  });
+});
+
+describe("leitura de print", () => {
+  const img = { tipo: "image/jpeg" as const, base64: "A".repeat(200) };
+  const dados = {
+    marketplace: "mercadolivre", nome: " Fone Bluetooth ", preco: 59.9, precoAnterior: 99.9, comissaoPercentual: 17,
+    caracteristicas: ["Bluetooth 5.3", ""], descricao: null, avaliacao: 4.8, urgencia: null, avisos: [],
+  };
+  function cliente(saida: Record<string, unknown>) {
+    const pedidos: any[] = [];
+    const client = { beta: { messages: { parse: async (p: unknown) => { pedidos.push(p); return { stop_reason: "end_turn", parsed_output: saida }; } } } } as unknown as Anthropic;
+    return { client, pedidos };
+  }
+
+  it("lê o print e manda as imagens para a IA", async () => {
+    const { client, pedidos } = cliente(dados);
+    const r = await new GeradorTexto({ modelo: "m", limiteDiario: 5 }, client).lerPrint({ imagens: [img] });
+    expect(r.dados).toMatchObject({ nome: "Fone Bluetooth", preco: 59.9, precoAnterior: 99.9, comissaoPercentual: 17, caracteristicas: ["Bluetooth 5.3"] });
+    expect(pedidos[0].messages[0].content[0]).toMatchObject({ type: "image", source: { type: "base64", media_type: "image/jpeg" } });
+  });
+
+  it("descarta valores impossíveis em vez de inventar", () => {
+    const d = limparPrint({ ...dados, preco: 99.9, precoAnterior: 59.9, comissaoPercentual: 170, avaliacao: 9 } as never);
+    expect(d.precoAnterior).toBeNull();
+    expect(d.comissaoPercentual).toBeNull();
+    expect(d.avaliacao).toBeNull();
+    expect(d.avisos.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("sem chave da IA avisa", async () => {
+    await expect(new GeradorTexto({ modelo: "m", limiteDiario: 5 }).lerPrint({ imagens: [img] })).rejects.toMatchObject({ codigo: "nao_configurado" });
   });
 });

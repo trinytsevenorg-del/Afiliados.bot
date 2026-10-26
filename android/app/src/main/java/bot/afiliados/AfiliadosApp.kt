@@ -28,6 +28,8 @@ class AfiliadosApp : Application() {
     val backup by lazy { Backup(banco.dao()) }
     /** Tema atual, observado pela interface. */
     val tema by lazy { androidx.compose.runtime.mutableStateOf(prefs.tema) }
+    /** Prints recebidos pelo "Compartilhar", esperando o formulário abrir. */
+    val printPendente = androidx.compose.runtime.mutableStateOf<List<android.net.Uri>>(emptyList())
 
     override fun onCreate() {
         super.onCreate()

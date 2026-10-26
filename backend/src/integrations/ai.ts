@@ -46,6 +46,44 @@ Use apenas os fatos do JSON recebido. Regras que não podem ser quebradas:
 - Respeite "preferenciasTexto" do nicho quando existir.
 - Se "versaoAnterior" existir, escreva uma versão diferente dela.`;
 
+export const PedidoPrint = z.object({
+  imagens: z
+    .array(
+      z.object({
+        tipo: z.enum(["image/jpeg", "image/png", "image/webp"]),
+        // ~4 MB por imagem depois de virar base64
+        base64: z.string().min(100).max(5_600_000).regex(/^[A-Za-z0-9+/=]+$/, "Imagem inválida"),
+      }),
+    )
+    .min(1)
+    .max(3),
+});
+export type PedidoPrint = z.infer<typeof PedidoPrint>;
+
+export const DadosPrint = z.object({
+  marketplace: z.enum(["shopee", "mercadolivre", "outro", "desconhecido"]),
+  nome: z.string().nullable().describe("Título do produto exatamente como aparece"),
+  preco: z.number().nullable().describe("Preço atual à vista em reais, como número (ex.: 59.9). Null se não estiver visível"),
+  precoAnterior: z.number().nullable().describe("Preço riscado/anterior em reais, só se aparecer riscado na tela"),
+  comissaoPercentual: z.number().nullable().describe("Porcentagem de ganho/comissão do afiliado mostrada na tela (ex.: 'Ganhe 17%' → 17)"),
+  caracteristicas: z.array(z.string()).describe("Até 8 características escritas na tela (especificações, cor, tamanho). Nada deduzido"),
+  descricao: z.string().nullable().describe("Trecho da descrição visível, se houver"),
+  avaliacao: z.number().nullable().describe("Nota média visível (ex.: 4.8), se houver"),
+  urgencia: z.string().nullable().describe("Prazo de oferta escrito na tela (ex.: 'termina em 2h'), se houver"),
+  avisos: z.array(z.string()).describe("O que ficou ilegível, cortado ou duvidoso"),
+});
+export type DadosPrint = z.infer<typeof DadosPrint>;
+
+const SISTEMA_PRINT = `Você lê prints de anúncios da Shopee e do Mercado Livre e devolve os dados em JSON.
+Regras que não podem ser quebradas:
+- Copie apenas o que está ESCRITO na imagem. Nunca deduza, estime ou complete.
+- Campo que não aparece com clareza fica null (ou lista vazia) e vira um aviso.
+- Preço atual: o valor principal à vista. Não use preço de parcela, de frete nem de cupom.
+- Preço anterior: só o valor que aparece riscado.
+- Comissão: só a porcentagem de ganho do afiliado mostrada na tela (barra de afiliados, "Ganhe X%", "Ganhos X%").
+- Valores em reais viram número com ponto decimal: "R$ 1.299,90" vira 1299.9.
+- Se houver várias imagens, elas são do mesmo produto.`;
+
 export interface UsoIa {
   data: string;
   usados: number;
@@ -120,6 +158,41 @@ export class GeradorTexto {
     return { textos, avisos: problemas, modelo: this.opts.modelo, geradoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
   }
 
+  /** Lê prints do anúncio e devolve só o que está escrito neles. */
+  async lerPrint(pedido: PedidoPrint) {
+    if (!this.client) throw new IntegracaoErro("nao_configurado", "IA não configurada (ANTHROPIC_API_KEY)", 503);
+    const uso = this.usoHoje();
+    if (uso.usados >= this.opts.limiteDiario) throw new IntegracaoErro("limite", `Limite diário de ${this.opts.limiteDiario} usos da IA atingido`, 429);
+    uso.usados++;
+    let resp;
+    try {
+      resp = await this.client.beta.messages.parse({
+        model: this.opts.modelo,
+        max_tokens: 4000,
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        output_config: { effort: "low", format: betaZodOutputFormat(DadosPrint) },
+        system: SISTEMA_PRINT,
+        messages: [{
+          role: "user",
+          content: [
+            ...pedido.imagens.map((i) => ({ type: "image" as const, source: { type: "base64" as const, media_type: i.tipo, data: i.base64 } })),
+            { type: "text" as const, text: "Extraia os dados do produto destes prints." },
+          ],
+        }],
+      });
+    } catch (e) {
+      if (e instanceof Anthropic.BadRequestError) throw new IntegracaoErro("resposta_invalida", "A IA não conseguiu abrir a imagem. Tente outro print.", 400);
+      if (e instanceof Anthropic.AuthenticationError) throw new IntegracaoErro("autenticacao", "Chave da IA recusada", 401);
+      if (e instanceof Anthropic.RateLimitError) throw new IntegracaoErro("limite", "IA ocupada (limite do provedor). Tente em instantes.", 429);
+      if (e instanceof Anthropic.APIError) throw new IntegracaoErro("indisponivel", `Erro da IA (${e.status ?? "conexão"})`);
+      throw e;
+    }
+    if (resp.stop_reason === "refusal") throw new IntegracaoErro("indisponivel", "A IA recusou ler este print. Preencha à mão.", 422);
+    if (!resp.parsed_output) throw new IntegracaoErro("resposta_invalida", "A IA não devolveu o formato esperado", 502);
+    return { dados: limparPrint(resp.parsed_output), lidoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
+  }
+
   private conferir(t: TextosGerados, f: FatosProduto) {
     const partes = [t.titulo, t.whatsapp, t.canal, t.descricao, t.cta, t.objetiva, t.chamativa, f.urgenciaFato ? "" : t.urgencia ?? ""];
     return [...new Set(partes.flatMap((p) => conferirTexto(p, f)))];
@@ -135,7 +208,43 @@ export class GeradorTexto {
       detalhe: ok ? `Modelo ${this.opts.modelo}. Usados hoje: ${uso.usados} de ${this.opts.limiteDiario}.` : "Falta ANTHROPIC_API_KEY no backend",
       verificadoEm: new Date().toISOString(),
       comoConfigurar: "Crie uma chave em console.anthropic.com e coloque em ANTHROPIC_API_KEY no .env do backend. Nunca no app.",
-      operacoes: [{ id: "gerar_texto", descricao: "Gerar textos promocionais", implementada: true, disponivel: ok, motivo: ok ? undefined : "Não configurado" }],
+      operacoes: [
+        { id: "gerar_texto", descricao: "Gerar textos promocionais", implementada: true, disponivel: ok, motivo: ok ? undefined : "Não configurado" },
+        { id: "ler_print", descricao: "Preencher produto pelo print do anúncio", implementada: true, disponivel: ok, motivo: ok ? undefined : "Não configurado" },
+      ],
     };
   }
+}
+
+/** Descarta valores impossíveis em vez de passar adiante um número errado. */
+export function limparPrint(d: DadosPrint): DadosPrint {
+  const avisos = [...d.avisos];
+  const valor = (n: number | null, nome: string) => {
+    if (n === null) return null;
+    if (!Number.isFinite(n) || n <= 0 || n > 1_000_000) { avisos.push(`${nome} descartado: valor estranho (${n})`); return null; }
+    return Math.round(n * 100) / 100;
+  };
+  const preco = valor(d.preco, "Preço");
+  let precoAnterior = valor(d.precoAnterior, "Preço anterior");
+  if (precoAnterior !== null && (preco === null || precoAnterior <= preco)) {
+    avisos.push("Preço anterior descartado: não é maior que o preço atual");
+    precoAnterior = null;
+  }
+  let comissao = d.comissaoPercentual;
+  if (comissao !== null && (!Number.isFinite(comissao) || comissao <= 0 || comissao > 50)) {
+    avisos.push(`Comissão descartada: ${comissao}% não parece real`);
+    comissao = null;
+  }
+  const avaliacao = d.avaliacao !== null && d.avaliacao >= 0 && d.avaliacao <= 5 ? d.avaliacao : null;
+  return {
+    ...d,
+    nome: d.nome?.trim().slice(0, 200) || null,
+    preco,
+    precoAnterior,
+    comissaoPercentual: comissao,
+    avaliacao,
+    caracteristicas: d.caracteristicas.map((c) => c.trim()).filter(Boolean).slice(0, 8).map((c) => c.slice(0, 200)),
+    descricao: d.descricao?.slice(0, 2000) ?? null,
+    avisos: [...new Set(avisos)],
+  };
 }

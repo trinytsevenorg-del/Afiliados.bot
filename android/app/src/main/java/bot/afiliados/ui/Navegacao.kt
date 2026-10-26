@@ -78,6 +78,10 @@ fun AppRaiz(app: AfiliadosApp, atividade: MainActivity, desbloqueado: Boolean, a
     LaunchedEffect(link) {
         link?.let { nav.irPara(Rotas.novoProduto(it)); atividade.linkRecebido.value = null }
     }
+    val print by atividade.printRecebido
+    LaunchedEffect(print) {
+        if (print) { nav.irPara(Rotas.novoProduto()); atividade.printRecebido.value = false }
+    }
     val item by atividade.itemAberto
     LaunchedEffect(item) {
         item?.let { nav.irPara(Rotas.item(it)); atividade.itemAberto.value = null }

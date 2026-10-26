@@ -2,7 +2,7 @@ import { timingSafeEqual, createHash } from "node:crypto";
 import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod/v4";
 import type { Config } from "./config.js";
-import { GeradorTexto, PedidoTexto } from "./integrations/ai.js";
+import { GeradorTexto, PedidoPrint, PedidoTexto } from "./integrations/ai.js";
 import { MercadoLivre } from "./integrations/mercadolivre.js";
 import { Shopee } from "./integrations/shopee.js";
 import { Telegram, statusWhatsapp } from "./integrations/telegram.js";
@@ -116,6 +116,12 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
   app.post("/api/copy/generate", async (req, reply) => {
     if (!ia(req.ip)) return reply.code(429).send({ erro: "limite", mensagem: "Muitas gerações seguidas. Espere um minuto." });
     return deps.ia.gerar(PedidoTexto.parse(req.body));
+  });
+
+  // Prints são grandes: limite próprio só nesta rota.
+  app.post("/api/product/from-images", { bodyLimit: 16 * 1024 * 1024 }, async (req, reply) => {
+    if (!ia(req.ip)) return reply.code(429).send({ erro: "limite", mensagem: "Muitos usos seguidos da IA. Espere um minuto." });
+    return deps.ia.lerPrint(PedidoPrint.parse(req.body));
   });
 
   app.post("/api/publish/telegram", async (req) => {

@@ -19,6 +19,7 @@ Projeto separado da BattleHub. Não compartilha código, banco nem contas.
 |---|---|
 | Catálogo local (offline), nichos editáveis, busca e filtros | Funciona |
 | Cadastro por link (colar ou "Compartilhar" de outro app) | Funciona; valida HTTPS e o domínio, e segue links curtos pelo backend |
+| Cadastro pelo **print do anúncio** (IA lê nome, preço, % de ganho, características) | Funciona com `ANTHROPIC_API_KEY` |
 | Cadastro manual quando a consulta falha | Funciona |
 | Detecção de produto repetido | Funciona (pelo código do produto) |
 | Textos com IA (7 versões + hashtags), editáveis, com histórico | Funciona com `ANTHROPIC_API_KEY` no backend |
@@ -39,7 +40,7 @@ Projeto separado da BattleHub. Não compartilha código, banco nem contas.
 cd backend
 cp .env.example .env      # preencha APP_TOKEN e as chaves que tiver
 npm ci
-npm test                  # 30 testes
+npm test                  # 34 testes
 npm run build && npm start
 ```
 
@@ -52,7 +53,7 @@ O app só aceita backend em **HTTPS**. Opções:
 
 ```bash
 cd android
-./gradlew :app:testDebugUnitTest   # 35 testes
+./gradlew :app:testDebugUnitTest   # 36 testes
 ./gradlew :app:assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
 ```
 

@@ -1,5 +1,8 @@
 package bot.afiliados.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -71,6 +74,9 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
     var caracteristicas by mutableStateOf("")
     var observacoes by mutableStateOf("")
     var gerandoLink by mutableStateOf(false)
+    var lendoPrint by mutableStateOf(false)
+    /** Preço lido do print: se continuar igual ao salvar, conta como "confirmado por você". */
+    private var precoDoPrint: Double? = null
 
     fun carregar(id: Long) = viewModelScope.launch {
         val p = repo.dao.produtoAgora(id) ?: return@launch
@@ -111,6 +117,38 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
         }
     }
 
+    fun lerPrints(cr: android.content.ContentResolver, uris: List<android.net.Uri>) = viewModelScope.launch {
+        if (uris.isEmpty()) return@launch
+        erro = null
+        lendoPrint = true
+        try {
+            val imagens = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { uris.take(3).map { bot.afiliados.data.Imagens.paraPrint(cr, it) } }
+            val d = repo.backend.lerPrint(imagens).dados
+            d.nome?.let { nome = it }
+            d.preco?.let { preco = Precos.formatar(it).removePrefix("R$ "); precoDoPrint = it }
+            d.precoAnterior?.let { precoAnterior = Precos.formatar(it).removePrefix("R$ "); anteriorComprovado = true }
+            d.comissaoPercentual?.let { comissao = it.toString(); comissaoOrigem = "print" }
+            if (d.caracteristicas.isNotEmpty()) {
+                val atuais = caracteristicas.lines().map(String::trim).filter(String::isNotEmpty)
+                caracteristicas = (atuais + d.caracteristicas.filter { it !in atuais }).joinToString("\n")
+            }
+            d.descricao?.takeIf { descricao.isBlank() }?.let { descricao = it }
+            if (marketplace == Marketplace.OUTRO) marketplace = when (d.marketplace) {
+                "shopee" -> Marketplace.SHOPEE
+                "mercadolivre" -> Marketplace.MERCADO_LIVRE
+                else -> marketplace
+            }
+            avisos = listOf("Lido do print pela IA. Confira cada campo antes de salvar.") + d.avisos
+            analisado = true
+        } catch (e: FalhaBackend) {
+            erro = "Leitura do print indisponível: ${e.message}"
+        } catch (e: Exception) {
+            erro = e.message ?: "Não deu para ler a imagem"
+        } finally {
+            lendoPrint = false
+        }
+    }
+
     fun gerarLinkShopee(aoErro: (String) -> Unit) = viewModelScope.launch {
         gerandoLink = true
         try {
@@ -125,6 +163,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
     }
 
     fun validar(): String? {
+        if (link.isBlank() && linkAfiliado.isNotBlank()) link = linkAfiliado.trim()
         if (nome.isBlank()) return "Informe o nome"
         if (Links.validar(link, exigirConhecido = false) !is Links.Resultado.Ok) return "Link original inválido (precisa ser HTTPS)"
         if (linkAfiliado.isNotBlank() && Links.validar(linkAfiliado, exigirConhecido = false) !is Links.Resultado.Ok) return "Link de afiliado inválido (precisa ser HTTPS)"
@@ -144,6 +183,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
         val o = original
         // O preço só conta como "verificado" se veio da fonte agora e não foi mudado à mão.
         val veioDaFonte = r?.fonte != null && r.preco != null && r.preco == precoN
+        val doPrint = !veioDaFonte && precoN != null && precoN == precoDoPrint
         val base = Produto(
             id = o?.id ?: 0,
             nome = nome.trim(),
@@ -165,17 +205,24 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
             observacoes = observacoes.trim(),
             situacaoPreco = when {
                 veioDaFonte -> SituacaoPreco.VERIFICADO
+                doPrint -> SituacaoPreco.VERIFICADO_MANUAL
                 o != null && o.preco == precoN -> o.situacaoPreco
                 else -> SituacaoPreco.NUNCA_VERIFICADO
             },
-            ultimaVerificacao = if (veioDaFonte) System.currentTimeMillis() else o?.ultimaVerificacao.takeIf { o?.preco == precoN },
-            fontePreco = if (veioDaFonte) r?.fonte else o?.fontePreco,
+            ultimaVerificacao = if (veioDaFonte || doPrint) System.currentTimeMillis() else o?.ultimaVerificacao.takeIf { o?.preco == precoN },
+            fontePreco = if (veioDaFonte) r?.fonte else if (doPrint) "print" else o?.fontePreco,
             urgenciaFato = r?.urgenciaFato ?: o?.urgenciaFato,
             arquivado = o?.arquivado ?: false,
             criadoEm = o?.criadoEm ?: System.currentTimeMillis(),
         )
         try {
-            if (o == null) aoSalvar(repo.salvarNovo(base, if (veioDaFonte) r?.fonte else null))
+            if (o == null) aoSalvar(
+                when {
+                    veioDaFonte -> repo.salvarNovo(base, r?.fonte)
+                    doPrint -> repo.salvarNovo(base, "print", SituacaoPreco.VERIFICADO_MANUAL)
+                    else -> repo.salvarNovo(base, null)
+                },
+            )
             else { repo.salvarEdicao(base); aoSalvar(o.id) }
         } catch (e: ProdutoRepetido) {
             repetido = e.existente
@@ -197,6 +244,14 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
         else if (linkInicial != null && vm.link.isBlank()) { vm.link = linkInicial; vm.analisar() }
     }
     val novo = produtoId == null
+    val escolherPrints = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(3)) { uris ->
+        vm.lerPrints(ctx.contentResolver, uris)
+    }
+    // Print enviado pelo "Compartilhar" de outro app.
+    val pendente = app.printPendente.value
+    LaunchedEffect(pendente) {
+        if (pendente.isNotEmpty()) { app.printPendente.value = emptyList(); vm.lerPrints(ctx.contentResolver, pendente) }
+    }
 
     Scaffold(topBar = {
         TopAppBar(title = { Text(if (novo) "Novo produto" else "Editar produto") }, navigationIcon = {
@@ -205,7 +260,7 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
     }) { pad ->
         LazyColumn(Modifier.padding(pad), contentPadding = espaco, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Campo(vm.link, { vm.link = it }, "Link do produto", ajuda = "Cole o link da Shopee ou do Mercado Livre (HTTPS)", erro = vm.erro.takeIf { !vm.analisado })
+                Campo(vm.link, { vm.link = it }, "Link do produto", ajuda = "Cole o link da Shopee ou do Mercado Livre (HTTPS)")
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -213,6 +268,18 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
                     if (!vm.analisado) OutlinedButton(onClick = { vm.analisado = true; vm.marketplace = Links.marketplaceDoHost(runCatching { java.net.URI(vm.link.trim()).host }.getOrNull() ?: "") ?: Marketplace.OUTRO }) { Text("Preencher à mão") }
                     if (vm.analisando) CircularProgressIndicator(Modifier.padding(start = 8.dp))
                 }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Button(
+                        onClick = { escolherPrints.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                        enabled = !vm.lendoPrint,
+                    ) { Text(if (vm.lendoPrint) "Lendo o print…" else "📷 Preencher pelo print") }
+                    if (vm.lendoPrint) CircularProgressIndicator()
+                }
+                Text("Tire print do anúncio (com a barra de ganhos de afiliado) e escolha até 3 imagens. A IA lê nome, preço, preço riscado, % de ganho e características.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (!vm.analisado) vm.erro?.let { Aviso(it, erro = true) }
             }
             vm.repetido?.let { r ->
                 item {
@@ -251,7 +318,7 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
                 }
                 item {
                     Campo(vm.comissao, { vm.comissao = it; vm.comissaoOrigem = "manual" }, "Comissão (%)", numero = true,
-                        ajuda = when (vm.comissaoOrigem) { "shopee_api" -> "Informada pela API da Shopee"; "manual" -> "Informada por você"; else -> "Opcional" })
+                        ajuda = when (vm.comissaoOrigem) { "shopee_api" -> "Informada pela API da Shopee"; "print" -> "Lida do print (confira)"; "manual" -> "Informada por você"; else -> "Opcional" })
                     Precos.comissaoEstimada(Precos.ler(vm.preco), Precos.ler(vm.comissao))?.let {
                         Text("Comissão estimada por venda: ${Precos.formatar(it)} (estimativa)", style = MaterialTheme.typography.bodySmall)
                     }

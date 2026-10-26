@@ -49,6 +49,14 @@ class BackendTest {
         try { cliente().publicarTelegram(PedidoTelegram("fila-1-abc", "@canal", "x")); fail() } catch (e: FalhaBackend.SemResposta) { }
     }
 
+    @Test fun leituraDePrintTrazSoOQueVeio() = runTest {
+        srv.enqueue(MockResponse().setBody("""{"dados":{"marketplace":"mercadolivre","nome":"Fone","preco":59.9,"precoAnterior":null,"comissaoPercentual":17,"caracteristicas":["Bluetooth 5.3"],"descricao":null,"avaliacao":null,"urgencia":null,"avisos":["Preço riscado ilegível"]},"lidoEm":"x","restantesHoje":3}"""))
+        val r = cliente().lerPrint(listOf(bot.afiliados.data.ImagemPrint("image/jpeg", "AAAA")))
+        assertEquals(17.0, r.dados.comissaoPercentual!!, 0.0)
+        assertEquals(null, r.dados.precoAnterior)
+        assertTrue(srv.takeRequest().body.readUtf8().contains("\"tipo\":\"image/jpeg\""))
+    }
+
     @Test fun respostaDoTelegramTrazConfirmacao() = runTest {
         srv.enqueue(MockResponse().setBody("""{"chatId":"-100","messageId":77,"publicadoEm":"2026-10-26T00:00:00Z","repetido":false}"""))
         val r = cliente().publicarTelegram(PedidoTelegram("fila-1-abc", "@canal", "x"))

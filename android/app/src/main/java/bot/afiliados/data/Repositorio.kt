@@ -108,7 +108,7 @@ class Repositorio(
     /** Converte em link de afiliado SÓ pela API oficial da Shopee. */
     suspend fun gerarLinkShopee(linkOriginal: String): LinkAfiliado = backend.linkShopee(linkOriginal, prefs.subIdPadrao)
 
-    suspend fun salvarNovo(p: Produto, fonteDados: String?): Long {
+    suspend fun salvarNovo(p: Produto, fonteDados: String?, resultado: SituacaoPreco = SituacaoPreco.VERIFICADO): Long {
         dao.produtoPorChave(p.chave)?.let { throw ProdutoRepetido(it) }
         val id = try {
             dao.inserir(p.copy(criadoEm = agora(), atualizadoEm = agora()))
@@ -116,7 +116,7 @@ class Repositorio(
             throw ProdutoRepetido(dao.produtoPorChave(p.chave) ?: throw e)
         }
         if (fonteDados != null && p.preco != null) {
-            dao.inserir(VerificacaoPreco(produtoId = id, preco = p.preco, precoAnterior = p.precoAnterior, fonte = fonteDados, resultado = SituacaoPreco.VERIFICADO, consultadoEm = agora()))
+            dao.inserir(VerificacaoPreco(produtoId = id, preco = p.preco, precoAnterior = p.precoAnterior, fonte = fonteDados, resultado = resultado, consultadoEm = agora()))
         }
         registrar("produto", "Cadastrou ${p.nome}")
         return id

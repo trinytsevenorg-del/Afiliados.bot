@@ -20,6 +20,18 @@
 
 ## Parte 2 · Cadastrar um produto
 
+### Jeito mais rápido: pelo print (precisa da IA ligada)
+
+1. No app da loja, abra o produto e tire **print** da tela. A barra de afiliado com o seu **% de ganho** e o **preço** precisam aparecer. Se as características estiverem mais embaixo, tire um segundo print.
+2. Na galeria, toque em **Compartilhar → Afiliados.bot**. Ou, no app: **Novo produto → 📷 Preencher pelo print** e escolha até 3 imagens.
+3. A IA preenche nome, preço, preço riscado, % de ganho e características. **Só o que está escrito no print.** O que não aparece fica vazio.
+4. Cole o **link de afiliado**, escolha o **nicho**, confira e salve.
+5. Se você não mexer no preço lido, ele já fica como **"Confirmado por você"**. Assim não precisa confirmar de novo para publicar.
+
+A comissão estimada sai sozinha: preço × % de ganho (ex.: R$ 100 × 17% = R$ 17). Ela é **estimativa**. O valor real só vale quando a loja confirmar.
+
+### Pelo link
+
 1. Na Shopee ou no Mercado Livre, abra o produto e toque em **Compartilhar → Afiliados.bot**. Ou, no app: **Início → Novo produto** e cole o link.
 2. Toque em **Analisar**. O app confere o link, abre links curtos e busca os dados oficiais (quando a integração está ligada).
 3. Revise os campos e complete o que faltar. O que não veio fica vazio: o app nunca inventa.
