@@ -42,6 +42,37 @@ export class ArmazemMemoria implements Armazem {
   }
 }
 
+/**
+ * Arruma o DATABASE_URL colado do Supabase: tira aspas e espaços, tira os colchetes
+ * de "[senha]" e codifica a senha (símbolos como @ # / ? quebram o endereço).
+ * Devolve o erro em português quando ainda é o modelo sem a senha.
+ */
+export function normalizarUrlBanco(bruto: string): { url: string } | { erro: string } {
+  let u = bruto.trim().replace(/^DATABASE_URL\s*=\s*/i, "").replace(/^["'`]+|["'`]+$/g, "").trim();
+  const m = /^(postgres(?:ql)?:\/\/)([^:/@\s]+):(.*)@([^@\s]+)$/s.exec(u);
+  if (!m) return { erro: "Endereço do banco em formato errado. Copie de novo em Supabase → Connect → Session pooler." };
+  let senha = m[3] ?? "";
+  if (senha.startsWith("[") && senha.endsWith("]")) senha = senha.slice(1, -1);
+  if (/^YOUR[-_ ]PASSWORD$/i.test(senha)) return { erro: "Troque [YOUR-PASSWORD] pela senha do banco no DATABASE_URL." };
+  try { if (/%[0-9a-f]{2}/i.test(senha)) senha = decodeURIComponent(senha); } catch { /* senha com % literal */ }
+  u = `${m[1]}${m[2]}:${encodeURIComponent(senha)}@${m[4]}`;
+  if (/@db\.[a-z0-9]+\.supabase\.co/i.test(u)) return { erro: "Esse é o endereço Direct (o Render grátis não alcança). Use Supabase → Connect → Session pooler." };
+  return { url: u };
+}
+
+/** Armazém que só devolve o erro de configuração (servidor segue no ar). */
+export class ArmazemComErro implements Armazem {
+  constructor(private readonly msg: string) {}
+  private falhar(): never { throw new Error(this.msg); }
+  async ler(): Promise<string | null> { this.falhar(); }
+  async gravar() { this.falhar(); }
+  async apagar() { this.falhar(); }
+  async apagarSessao() { this.falhar(); }
+  async envio(): Promise<null> { this.falhar(); }
+  async registrarEnvio() { this.falhar(); }
+  async enviosDoGrupo(): Promise<number[]> { this.falhar(); }
+}
+
 export class ArmazemPostgres implements Armazem {
   private pronto: Promise<void> | null = null;
   constructor(private readonly pool: import("pg").Pool) {

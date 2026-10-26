@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it } from "vitest";
-import { ArmazemMemoria, WhatsApp } from "../src/integrations/whatsapp.js";
+import { ArmazemMemoria, normalizarUrlBanco, WhatsApp } from "../src/integrations/whatsapp.js";
 
 /** Socket falso do Baileys: só o que o módulo usa. */
 function socketFalso() {
@@ -50,6 +50,17 @@ describe("WhatsApp automático (número próprio)", () => {
     await expect(wa.iniciar()).resolves.toBeUndefined();
     expect(wa.banco).toBe("erro");
     expect(wa.status().detalhe).toContain("password authentication failed");
+  });
+
+  it("arruma o DATABASE_URL colado do Supabase", () => {
+    const base = "postgres.abc:SENHA@aws-1-us-east-2.pooler.supabase.com:5432/postgres";
+    expect(normalizarUrlBanco(` "postgresql://${base.replace("SENHA", "[Minh@#Senha/1?]")}" `)).toEqual({
+      url: `postgresql://${base.replace("SENHA", encodeURIComponent("Minh@#Senha/1?"))}`,
+    });
+    expect(normalizarUrlBanco(`postgresql://${base.replace("SENHA", "a%40b")}`)).toEqual({ url: `postgresql://${base.replace("SENHA", "a%40b")}` });
+    expect(normalizarUrlBanco(`postgresql://${base.replace("SENHA", "[YOUR-PASSWORD]")}`)).toEqual({ erro: expect.stringContaining("YOUR-PASSWORD") });
+    expect(normalizarUrlBanco("postgresql://postgres:x@db.abc.supabase.co:5432/postgres")).toEqual({ erro: expect.stringContaining("Session pooler") });
+    expect(normalizarUrlBanco("https://abc.supabase.co")).toEqual({ erro: expect.stringContaining("formato errado") });
   });
 
   it("conecta pelo código de 8 letras e lista os grupos", async () => {

@@ -7,7 +7,7 @@ import { GeradorTexto, PedidoPrint, PedidoTexto } from "./integrations/ai.js";
 import { MercadoLivre } from "./integrations/mercadolivre.js";
 import { Shopee } from "./integrations/shopee.js";
 import { Telegram } from "./integrations/telegram.js";
-import { ArmazemPostgres, WhatsApp } from "./integrations/whatsapp.js";
+import { ArmazemComErro, ArmazemPostgres, normalizarUrlBanco, WhatsApp } from "./integrations/whatsapp.js";
 import { IntegracaoErro } from "./integrations/types.js";
 import { analisarLink, extrairIds, LinkInvalido, validarUrl } from "./lib/links.js";
 
@@ -30,10 +30,17 @@ export function criarDeps(cfg: Config): Deps {
     }),
     telegram: new Telegram({ token: cfg.TELEGRAM_BOT_TOKEN, dataDir: cfg.DATA_DIR }),
     whatsapp: new WhatsApp(
-      cfg.DATABASE_URL ? new ArmazemPostgres(new pg.Pool({ connectionString: cfg.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 })) : null,
+      armazemDoBanco(cfg.DATABASE_URL),
       { intervaloMin: cfg.WA_INTERVALO_MIN, maxDia: cfg.WA_MAX_DIA },
     ),
   };
+}
+
+function armazemDoBanco(bruto: string | undefined) {
+  if (!bruto) return null;
+  const r = normalizarUrlBanco(bruto);
+  if ("erro" in r) return new ArmazemComErro(r.erro);
+  return new ArmazemPostgres(new pg.Pool({ connectionString: r.url, ssl: { rejectUnauthorized: false }, max: 3 }));
 }
 
 function tokenIgual(recebido: string, esperado: string) {
