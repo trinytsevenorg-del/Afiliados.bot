@@ -1,3 +1,4 @@
+import pg from "pg";
 import { timingSafeEqual, createHash } from "node:crypto";
 import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod/v4";
@@ -5,7 +6,8 @@ import type { Config } from "./config.js";
 import { GeradorTexto, PedidoPrint, PedidoTexto } from "./integrations/ai.js";
 import { MercadoLivre } from "./integrations/mercadolivre.js";
 import { Shopee } from "./integrations/shopee.js";
-import { Telegram, statusWhatsapp } from "./integrations/telegram.js";
+import { Telegram } from "./integrations/telegram.js";
+import { ArmazemPostgres, WhatsApp } from "./integrations/whatsapp.js";
 import { IntegracaoErro } from "./integrations/types.js";
 import { analisarLink, extrairIds, LinkInvalido, validarUrl } from "./lib/links.js";
 
@@ -14,6 +16,7 @@ export interface Deps {
   ml: MercadoLivre;
   ia: GeradorTexto;
   telegram: Telegram;
+  whatsapp: WhatsApp;
   fetchImpl?: typeof fetch;
 }
 
@@ -26,6 +29,10 @@ export function criarDeps(cfg: Config): Deps {
       geminiKey: cfg.GEMINI_API_KEY, geminiModelos: cfg.GEMINI_MODELS.split(",").map((m) => m.trim()).filter(Boolean),
     }),
     telegram: new Telegram({ token: cfg.TELEGRAM_BOT_TOKEN, dataDir: cfg.DATA_DIR }),
+    whatsapp: new WhatsApp(
+      cfg.DATABASE_URL ? new ArmazemPostgres(new pg.Pool({ connectionString: cfg.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 })) : null,
+      { intervaloMin: cfg.WA_INTERVALO_MIN, maxDia: cfg.WA_MAX_DIA },
+    ),
   };
 }
 
@@ -92,7 +99,7 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
   app.get("/api/integrations/status", async (req) => {
     const testar = (req.query as { testar?: string }).testar === "1";
     const [shopee, telegram] = await Promise.all([deps.shopee.status(testar), deps.telegram.status(testar)]);
-    return { integracoes: [shopee, deps.ml.status(), deps.ia.status(), telegram, statusWhatsapp()] };
+    return { integracoes: [shopee, deps.ml.status(), deps.ia.status(), telegram, deps.whatsapp.status()] };
   });
 
   app.post("/api/links/analyze", async (req) => {
@@ -147,6 +154,32 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
       .parse(req.body);
     if (b.imagem && !b.imagem.startsWith("https://")) throw new LinkInvalido("A imagem precisa ser HTTPS");
     return deps.telegram.publicar(b);
+  });
+
+  app.get("/api/whatsapp/status", async () => deps.whatsapp.resumo());
+
+  app.post("/api/whatsapp/connect", async (req) => {
+    const { telefone } = z.object({ telefone: z.string().min(10).max(20) }).parse(req.body);
+    return deps.whatsapp.conectar(telefone);
+  });
+
+  app.post("/api/whatsapp/disconnect", async () => {
+    await deps.whatsapp.desconectar();
+    return { ok: true };
+  });
+
+  app.get("/api/whatsapp/groups", async () => ({ grupos: await deps.whatsapp.grupos() }));
+
+  app.post("/api/publish/whatsapp", { bodyLimit: 12 * 1024 * 1024 }, async (req) => {
+    const b = z
+      .object({
+        chave: z.string().min(8).max(100),
+        grupo: z.string().regex(/^[\d-]{5,40}@g\.us$/, "Grupo inválido"),
+        texto: z.string().min(1).max(4096),
+        foto: FotoEnvio.nullish(),
+      })
+      .parse(req.body);
+    return deps.whatsapp.publicar(b);
   });
 
   app.post("/api/telegram/test-destination", async (req) => {

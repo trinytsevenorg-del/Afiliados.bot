@@ -140,6 +140,7 @@ fun AjustesTela(app: AfiliadosApp, nav: NavHostController) {
                 }
             }
         }
+        item { WhatsAppAutomatico(app) }
         item {
             Secao("Canais de divulgação", acao = { TextButton(onClick = { editandoCanal = Canal(nome = "", tipo = TipoCanal.WHATSAPP_COMPARTILHAR) }) { Text("Adicionar") } }) {
                 if (canais.isEmpty()) Text("Nenhum canal. Sem canal, você escolhe o destino na hora de compartilhar.", style = MaterialTheme.typography.bodySmall)
@@ -248,7 +249,24 @@ private fun EditorCanal(app: AfiliadosApp, c: Canal, aoFechar: () -> Unit, aoSal
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Campo(nome, { nome = it }, "Nome (ex.: Grupo Ofertas Tech)")
                 Escolha("Tipo", TipoCanal.entries, tipo, { it.rotulo }, { tipo = it })
-                if (tipo == TipoCanal.TELEGRAM) {
+                if (tipo == TipoCanal.WHATSAPP_AUTO) {
+                    var grupos by remember { mutableStateOf<List<bot.afiliados.data.GrupoWhatsapp>?>(null) }
+                    var erroGrupos by remember { mutableStateOf<String?>(null) }
+                    Text(if (destino.isBlank()) "Nenhum grupo escolhido" else "Grupo: ${teste ?: destino}", style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { escopo.launch {
+                        try { grupos = app.backend.whatsappGrupos().grupos; erroGrupos = null } catch (e: FalhaBackend) { erroGrupos = e.message }
+                    } }) { Text("Escolher grupo") }
+                    erroGrupos?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                    grupos?.let { lista ->
+                        if (lista.isEmpty()) Text("Este número não está em nenhum grupo.", style = MaterialTheme.typography.bodySmall)
+                        lista.forEach { g ->
+                            TextButton(onClick = { destino = g.id; teste = g.nome; if (nome.isBlank()) nome = g.nome; grupos = null }) {
+                                Text("${g.nome} · ${g.participantes} pessoas" + if (g.souAdmin) " · admin" else " · não é admin")
+                            }
+                        }
+                    }
+                    Text("Use só grupos seus, onde as pessoas entraram para receber ofertas.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else if (tipo == TipoCanal.TELEGRAM) {
                     Campo(destino, { destino = it.trim() }, "@canal ou ID do grupo", ajuda = "O bot precisa ser administrador")
                     TextButton(enabled = destino.isNotBlank(), onClick = { escopo.launch {
                         teste = try { app.backend.testarTelegram(destino).let { "Testado: ${it.titulo ?: it.id}" } } catch (e: FalhaBackend) { "Erro: ${e.message}" }
@@ -264,11 +282,63 @@ private fun EditorCanal(app: AfiliadosApp, c: Canal, aoFechar: () -> Unit, aoSal
         confirmButton = {
             TextButton(onClick = {
                 if (nome.isBlank()) return@TextButton ctx.avisar("Informe o nome")
+                if (tipo == TipoCanal.WHATSAPP_AUTO && !destino.endsWith("@g.us")) return@TextButton ctx.avisar("Escolha o grupo")
                 if (tipo == TipoCanal.TELEGRAM && !Regex("""^(@[A-Za-z0-9_]{5,32}|-?\d{5,20})$""").matches(destino)) return@TextButton ctx.avisar("Destino do Telegram inválido")
-                aoSalvar(c.copy(nome = nome.trim(), tipo = tipo, destino = if (tipo == TipoCanal.TELEGRAM) destino else "", ativo = ativo, ultimoTeste = teste), false)
+                aoSalvar(c.copy(nome = nome.trim(), tipo = tipo, destino = if (tipo.automatico) destino else "", ativo = ativo, ultimoTeste = teste), false)
             }) { Text("Salvar") }
         },
         dismissButton = { TextButton(onClick = aoFechar) { Text("Voltar") } },
     )
     if (confirmarExclusao) Confirmar("Excluir canal?", "Itens da fila deste canal passam para \"compartilhar\".", "Excluir", true, { aoSalvar(c, true) }, { confirmarExclusao = false })
+}
+
+/** Conexão do número próprio do WhatsApp (chip separado) pelo código de 8 letras. */
+@Composable
+private fun WhatsAppAutomatico(app: AfiliadosApp) {
+    val ctx = LocalContext.current
+    val escopo = rememberCoroutineScope()
+    var estado by remember { mutableStateOf<bot.afiliados.data.EstadoWhatsapp?>(null) }
+    var erro by remember { mutableStateOf<String?>(null) }
+    var telefone by remember { mutableStateOf("55") }
+    var codigo by remember { mutableStateOf<String?>(null) }
+    var ocupado by remember { mutableStateOf(false) }
+    var confirmarSaida by remember { mutableStateOf(false) }
+    fun atualizar() = escopo.launch {
+        try { estado = app.backend.whatsappStatus(); erro = null } catch (e: FalhaBackend) { erro = e.message }
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) { if (app.backend.configurado) atualizar() }
+
+    Secao("WhatsApp automático (número próprio)", acao = { TextButton(onClick = { atualizar() }) { Text("Atualizar") } }) {
+        Aviso("Não é a API oficial: o WhatsApp pode banir o número. Use um chip só para isso, deixe outro número seu como admin dos grupos e mantenha o intervalo.")
+        erro?.let { Aviso(it, erro = true) }
+        val e = estado
+        when (e?.estado) {
+            "conectado" -> {
+                Text("✓ Conectado no número ${e.numero ?: ""}", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
+                Text("Agora crie canais do tipo \"WhatsApp (automático)\" e escolha os grupos.", style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { confirmarSaida = true }) { Text("Desconectar número", color = MaterialTheme.colorScheme.error) }
+            }
+            "nao_configurado" -> Text("Falta DATABASE_URL no Render (Supabase grátis). Veja o guia em docs/WHATSAPP.md.", style = MaterialTheme.typography.bodySmall)
+            null -> Text("Toque em Atualizar para ver o estado.", style = MaterialTheme.typography.bodySmall)
+            else -> {
+                e.erro?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                Campo(telefone, { telefone = it.filter(Char::isDigit).take(13) }, "Número do chip (55 + DDD + número)", numero = true, ajuda = "Ex.: 5521999998888")
+                Button(enabled = !ocupado && telefone.length >= 12, onClick = {
+                    ocupado = true
+                    escopo.launch {
+                        try { codigo = app.backend.whatsappConectar(telefone).codigo; erro = null } catch (x: FalhaBackend) { erro = x.message }
+                        ocupado = false
+                    }
+                }) { Text(if (ocupado) "Gerando código…" else "Gerar código de conexão") }
+                codigo?.let {
+                    Text(it, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text("No WhatsApp do chip: ⋮ → Aparelhos conectados → Conectar um aparelho → Conectar com número de telefone → digite o código. Depois toque em Atualizar.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+    if (confirmarSaida) Confirmar("Desconectar o WhatsApp?", "O app para de postar nos grupos até você conectar de novo.", "Desconectar", true,
+        { escopo.launch { try { app.backend.whatsappDesconectar(); codigo = null; atualizar() } catch (x: FalhaBackend) { ctx.avisar(x.message ?: "Falha") } } },
+        { confirmarSaida = false })
 }

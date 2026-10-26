@@ -99,6 +99,14 @@ data class DadosPrint(
 @Serializable data class FotoPrint(val imagem: Int, val caixa: List<Double>)
 @Serializable data class RespostaPrint(val dados: DadosPrint, val restantesHoje: Int? = null)
 
+@Serializable data class EstadoWhatsapp(val estado: String, val numero: String? = null, val erro: String? = null)
+@Serializable data class CodigoWhatsapp(val codigo: String)
+@Serializable data class GrupoWhatsapp(val id: String, val nome: String, val participantes: Int = 0, val souAdmin: Boolean = false, val soAdminsEnviam: Boolean = false)
+@Serializable data class ListaGrupos(val grupos: List<GrupoWhatsapp>)
+@Serializable data class PedidoWhatsapp(val chave: String, val grupo: String, val texto: String, val foto: ImagemPrint? = null)
+@Serializable data class RespostaWhatsapp(val grupo: String, val mensagemId: String, val repetido: Boolean = false)
+@Serializable data class Ok(val ok: Boolean = true)
+
 class Backend(
     private val urlBase: () -> String,
     private val token: () -> String?,
@@ -157,5 +165,11 @@ class Backend(
     suspend fun gerarTexto(p: PedidoTexto) = chamar("POST", "/api/copy/generate", corpo(p, PedidoTexto.serializer()), RespostaTexto.serializer())
     suspend fun lerPrint(imagens: List<ImagemPrint>, nichos: List<String> = emptyList()) = chamar("POST", "/api/product/from-images", corpo(PedidoPrint(imagens, nichos), PedidoPrint.serializer()), RespostaPrint.serializer())
     suspend fun publicarTelegram(p: PedidoTelegram) = chamar("POST", "/api/publish/telegram", corpo(p, PedidoTelegram.serializer()), RespostaTelegram.serializer())
+    @Serializable private data class ComTelefone(val telefone: String)
+    suspend fun whatsappStatus() = chamar("GET", "/api/whatsapp/status", null, EstadoWhatsapp.serializer())
+    suspend fun whatsappConectar(telefone: String) = chamar("POST", "/api/whatsapp/connect", corpo(ComTelefone(telefone), ComTelefone.serializer()), CodigoWhatsapp.serializer())
+    suspend fun whatsappDesconectar() = chamar("POST", "/api/whatsapp/disconnect", "{}", Ok.serializer())
+    suspend fun whatsappGrupos() = chamar("GET", "/api/whatsapp/groups", null, ListaGrupos.serializer())
+    suspend fun publicarWhatsapp(p: PedidoWhatsapp) = chamar("POST", "/api/publish/whatsapp", corpo(p, PedidoWhatsapp.serializer()), RespostaWhatsapp.serializer())
     suspend fun testarTelegram(chatId: String) = chamar("POST", "/api/telegram/test-destination", corpo(ComChat(chatId), ComChat.serializer()), DestinoTelegram.serializer())
 }

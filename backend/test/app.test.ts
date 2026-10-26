@@ -56,7 +56,7 @@ describe("status das integrações", () => {
     const a = await app();
     const lista = (await a.inject({ url: "/api/integrations/status", headers: auth })).json().integracoes as { id: string; estado: string }[];
     const est = Object.fromEntries(lista.map((i) => [i.id, i.estado]));
-    expect(est).toEqual({ shopee: "nao_configurado", mercadolivre: "nao_configurado", ia: "nao_configurado", telegram: "nao_configurado", whatsapp: "indisponivel" });
+    expect(est).toEqual({ shopee: "nao_configurado", mercadolivre: "nao_configurado", ia: "nao_configurado", telegram: "nao_configurado", whatsapp: "nao_configurado" });
   });
 });
 

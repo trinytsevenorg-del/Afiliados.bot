@@ -146,19 +146,3 @@ export class Telegram {
     }
   }
 }
-
-export function statusWhatsapp(): StatusIntegracao {
-  return {
-    id: "whatsapp",
-    nome: "WhatsApp",
-    estado: "indisponivel",
-    detalhe:
-      "Envio automático para grupos comuns não é permitido pela via oficial. A API de Grupos da plataforma Business exige conta oficial (OBA) e grupos criados pela própria empresa. Use o compartilhamento do Android.",
-    verificadoEm: new Date().toISOString(),
-    comoConfigurar: "Nada a configurar no backend. No app, toque em Compartilhar e escolha o grupo ou canal. Depois marque como publicado.",
-    operacoes: [
-      { id: "compartilhar", descricao: "Compartilhar pelo Android (manual)", implementada: true, disponivel: true, motivo: "Feito no app; o envio é confirmado por você" },
-      { id: "envio_automatico_grupo", descricao: "Postar sozinho em grupos", implementada: false, disponivel: false, motivo: "Sem via oficial para grupos comuns" },
-    ],
-  };
-}

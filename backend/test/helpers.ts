@@ -24,6 +24,9 @@ export function cfgTeste(extra: Partial<Config> = {}): Config {
     ML_CLIENT_SECRET: undefined,
     ML_REFRESH_TOKEN: undefined,
     TELEGRAM_BOT_TOKEN: undefined,
+    DATABASE_URL: undefined,
+    WA_INTERVALO_MIN: 10,
+    WA_MAX_DIA: 40,
     ...extra,
   };
 }

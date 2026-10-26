@@ -18,6 +18,7 @@ enum class TipoCanal(val rotulo: String, val automatico: Boolean) {
     WHATSAPP_COMPARTILHAR("WhatsApp (compartilhar)", false),
     COMPARTILHAR("Outro app (compartilhar)", false),
     TELEGRAM("Telegram (automático)", true),
+    WHATSAPP_AUTO("WhatsApp (automático, número próprio)", true),
 }
 
 /** Máquina de estados da fila. Toda mudança passa por aqui. */

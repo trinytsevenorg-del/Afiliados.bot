@@ -83,7 +83,7 @@ fun FilaTela(app: AfiliadosApp, nav: NavHostController) {
         })
     }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = espaco, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            val prontosTelegram = fila.count { it.estado == EstadoFila.PRONTO && canais.firstOrNull { c -> c.id == it.canalId }?.tipo == TipoCanal.TELEGRAM }
+            val prontosTelegram = fila.count { it.estado == EstadoFila.PRONTO && canais.firstOrNull { c -> c.id == it.canalId }?.let { c -> c.tipo.automatico && c.ativo } == true }
             if (prontosTelegram > 0) item {
                 val ctx = LocalContext.current
                 Button(modifier = Modifier.fillMaxWidth(), onClick = {
@@ -92,7 +92,7 @@ fun FilaTela(app: AfiliadosApp, nav: NavHostController) {
                         itens.forEach { PublicarWorker.agendar(ctx, it, true, ExistingWorkPolicy.REPLACE) }
                         ctx.avisar("${itens.size} ofertas agendadas: uma a cada ${app.prefs.intervaloMinutos} min")
                     }
-                }) { Text("🚀 Publicar todos no Telegram ($prontosTelegram)") }
+                }) { Text("🚀 Publicar todos ($prontosTelegram)") }
                 Text("Começa em 1 minuto e segue um a cada ${app.prefs.intervaloMinutos} min (mude em Ajustes).", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (lista.isEmpty()) item {
@@ -154,7 +154,7 @@ fun ItemFilaTela(app: AfiliadosApp, nav: NavHostController, id: Long) {
     val sit = produto?.let { repo.situacaoPreco(it) }
     val bloqueios = if (sit != null) Fila.bloqueios(texto, item.link, sit, precoConfirmadoAgora = false) else listOf("Produto não encontrado")
     val mensagem = Mensagem.montar(texto, item.link, item.hashtags.split(' ').filter { it.isNotBlank() })
-    val automatico = canal?.tipo == TipoCanal.TELEGRAM
+    val automatico = canal?.tipo?.automatico == true
     val editavel = item.estado in setOf(EstadoFila.RASCUNHO, EstadoFila.AGUARDANDO_REVISAO, EstadoFila.AGUARDANDO_VERIFICACAO_PRECO, EstadoFila.PRONTO, EstadoFila.FALHA)
 
     fun mudar(novo: EstadoFila, msg: String? = null, depois: suspend (ItemFila) -> Unit = {}) = escopo.launch {

@@ -7,6 +7,7 @@ Celular (Android)                         Backend (Node/TS)                 Serv
 │ ViewModel / Repositório  │ ───────────► │ Limites, logs sem      │──► Shopee Afiliados (GraphQL)
 │ Room (catálogo offline)  │              │ segredo, token         │──► Mercado Livre (/items)
 │ WorkManager (agenda)     │              │ Conferência dos textos │──► Telegram Bot API
+│                          │              │                        │──► WhatsApp (Baileys, número próprio)
 │ Keystore (token cifrado) │              └────────────────────────┘
 └──────────────────────────┘
         │ compartilhar
@@ -43,5 +44,5 @@ Uma consulta que falha não apaga o preço salvo e também não renova a validad
 
 ## Testes
 
-- Backend: `npm test`, com 44 testes (links e redirecionamentos, assinatura da Shopee, erros e acesso, renovação do token do ML, conferência dos textos da IA, limite diário, token obrigatório, corpo grande e Telegram sem duplicar, inclusive depois de reiniciar).
-- Android: `./gradlew :app:testDebugUnitTest`, com 46 testes (regras, cliente HTTPS, backup, repositório com Room real, fluxo de publicação e abertura das telas com Robolectric).
+- Backend: `npm test`, com 51 testes (WhatsApp com socket falso, links e redirecionamentos, assinatura da Shopee, erros e acesso, renovação do token do ML, conferência dos textos da IA, limite diário, token obrigatório, corpo grande e Telegram sem duplicar, inclusive depois de reiniciar).
+- Android: `./gradlew :app:testDebugUnitTest`, com 47 testes (regras, cliente HTTPS, backup, repositório com Room real, fluxo de publicação e abertura das telas com Robolectric).

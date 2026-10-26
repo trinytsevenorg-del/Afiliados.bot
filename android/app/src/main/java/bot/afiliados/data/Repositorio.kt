@@ -313,7 +313,7 @@ class Repositorio(
     /** Itens prontos que vão sozinhos (Telegram), na ordem da fila. */
     suspend fun prontosAutomaticos(): List<ItemFila> {
         val canais = dao.canaisLista().associateBy { it.id }
-        return dao.itensNoEstado(EstadoFila.PRONTO).filter { i -> i.canalId?.let { canais[it] }?.let { it.tipo == TipoCanal.TELEGRAM && it.ativo } == true }
+        return dao.itensNoEstado(EstadoFila.PRONTO).filter { i -> i.canalId?.let { canais[it] }?.let { it.tipo.automatico && it.ativo } == true }
             .sortedWith(compareBy({ it.ordem }, { it.criadoEm }))
     }
 
@@ -348,12 +348,12 @@ class Repositorio(
 
     suspend fun mudar(item: ItemFila, novo: EstadoFila, resultado: String? = item.ultimoResultado) = dao.mudarEstado(item, novo, resultado)
 
-    /** Executa a publicação automática (Telegram). Chamado pelo WorkManager. */
+    /** Executa a publicação automática (Telegram ou WhatsApp com número próprio). Chamado pelo WorkManager. */
     suspend fun publicarAutomatico(itemId: Long): EstadoFila {
         val item = dao.itemAtivo(itemId)
         if (item.estado != EstadoFila.AGENDADO && item.estado != EstadoFila.PRONTO && item.estado != EstadoFila.ENVIO_NAO_CONFIRMADO) return item.estado
         val canal = item.canalId?.let { dao.canal(it) }
-        if (canal == null || canal.tipo != TipoCanal.TELEGRAM || !canal.ativo) return item.estado
+        if (canal == null || !canal.tipo.automatico || !canal.ativo) return item.estado
         val produto = dao.produtoAgora(item.produtoId) ?: return dao.mudarEstado(item, EstadoFila.CANCELADO, "Produto excluído").estado
         val sit = situacaoPreco(produto)
         val bloqueios = Fila.bloqueios(item.texto, item.link, sit, precoConfirmadoAgora = false)
@@ -363,13 +363,21 @@ class Repositorio(
             registrar("fila", "Publicação de ${produto.nome} parou: ${bloqueios.first()}")
             return EstadoFila.AGUARDANDO_VERIFICACAO_PRECO
         }
-        val emProc = dao.mudarEstado(item, EstadoFila.EM_PROCESSAMENTO, "Enviando ao Telegram")
+        val nomeServico = if (canal.tipo == TipoCanal.WHATSAPP_AUTO) "WhatsApp" else "Telegram"
+        val emProc = dao.mudarEstado(item, EstadoFila.EM_PROCESSAMENTO, "Enviando ao $nomeServico")
         val tentativa = dao.inserir(Tentativa(itemId = item.id, inicio = agora()))
         val (novo, detalhe, idExt) = try {
             val texto = bot.afiliados.domain.Mensagem.montar(item.texto, item.link, item.hashtags.split(' ').filter { it.isNotBlank() })
-            val r = backend.publicarTelegram(PedidoTelegram(chave = item.chave, chatId = canal.destino, texto = bot.afiliados.domain.Mensagem.paraTelegramHtml(texto),
-                imagem = produto.imagemUrl, fotos = produto.fotos.take(10).mapNotNull { Imagens.paraEnvio(it.path) }.ifEmpty { null }, formato = "html"))
-            Triple(EstadoFila.PUBLICADO_CONFIRMADO, "Telegram confirmou a mensagem ${r.messageId}" + if (r.repetido) " (já tinha sido enviada antes)" else "", r.messageId.toString())
+            if (canal.tipo == TipoCanal.WHATSAPP_AUTO) {
+                // WhatsApp: uma foto (a principal) com a mensagem na legenda, no formato nativo (*negrito*, ~riscado~).
+                val r = backend.publicarWhatsapp(PedidoWhatsapp(chave = item.chave, grupo = canal.destino, texto = texto,
+                    foto = produto.fotos.firstOrNull()?.let { Imagens.paraEnvio(it.path) }))
+                Triple(EstadoFila.PUBLICADO_CONFIRMADO, "WhatsApp confirmou a mensagem" + if (r.repetido) " (já tinha sido enviada antes)" else "", r.mensagemId)
+            } else {
+                val r = backend.publicarTelegram(PedidoTelegram(chave = item.chave, chatId = canal.destino, texto = bot.afiliados.domain.Mensagem.paraTelegramHtml(texto),
+                    imagem = produto.imagemUrl, fotos = produto.fotos.take(10).mapNotNull { Imagens.paraEnvio(it.path) }.ifEmpty { null }, formato = "html"))
+                Triple(EstadoFila.PUBLICADO_CONFIRMADO, "Telegram confirmou a mensagem ${r.messageId}" + if (r.repetido) " (já tinha sido enviada antes)" else "", r.messageId.toString())
+            }
         } catch (e: FalhaBackend.SemResposta) {
             Triple(EstadoFila.ENVIO_NAO_CONFIRMADO, "Sem resposta. Pode ter sido enviada; tentar de novo não duplica.", null)
         } catch (e: FalhaBackend.SemConexao) {

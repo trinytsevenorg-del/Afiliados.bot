@@ -42,7 +42,7 @@ class AfiliadosApp : Application() {
         repo.recuperarInterrompidos()
         val dao = repo.dao
         for (item in dao.itensNoEstado(EstadoFila.AGENDADO)) {
-            val auto = item.canalId?.let { dao.canal(it) }?.tipo == TipoCanal.TELEGRAM
+            val auto = item.canalId?.let { dao.canal(it) }?.tipo?.automatico == true
             PublicarWorker.agendar(this, item, auto, ExistingWorkPolicy.KEEP)
         }
         dao.limparAtividades(System.currentTimeMillis() - 90L * 24 * 3_600_000)

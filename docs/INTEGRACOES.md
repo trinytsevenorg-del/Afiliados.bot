@@ -42,7 +42,7 @@ Atualizado em 26/10/2026. Cada integração mostra o estado real em **Ajustes �
 ## WhatsApp
 
 - **Funciona:** "Abrir no WhatsApp" pelo compartilhamento do Android. Depois o app pergunta **"Você publicou?"**. Abrir o WhatsApp nunca conta como enviado.
-- **Não existe pela via oficial:** postar sozinho em grupos comuns. A API de Grupos da WhatsApp Business Platform exige conta oficial (OBA), só vale para grupos criados pela empresa e tem limite de participantes. Automação pelo WhatsApp Web não é usada, porque viola as regras e o número costuma ser banido.
+- **Automático (opcional, com risco):** conexão do seu número pelo protocolo do WhatsApp Web (Baileys), igual a Z-API e Evolution. Não é a API oficial e o número pode ser banido. Por isso: chip só para isso, só os seus grupos, intervalo mínimo e limite diário. Passo a passo: [`WHATSAPP.md`](WHATSAPP.md).
 - **Lembrete agendado:** no horário marcado, chega uma notificação "Hora de publicar". Você toca nela, revisa e envia.
 
 ## Variáveis do backend

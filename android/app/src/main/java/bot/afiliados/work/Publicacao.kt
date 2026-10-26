@@ -38,7 +38,7 @@ class PublicarWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         val item = repo.dao.itemAgora(id) ?: return Result.success()
         if (item.estado != EstadoFila.AGENDADO) return Result.success()
         val canal = item.canalId?.let { repo.dao.canal(it) }
-        if (canal?.tipo == TipoCanal.TELEGRAM) {
+        if (canal?.tipo?.automatico == true) {
             val novo = repo.publicarAutomatico(id)
             val produto = repo.dao.produtoAgora(item.produtoId)?.nome ?: "Oferta"
             if (novo != EstadoFila.PUBLICADO_CONFIRMADO) {

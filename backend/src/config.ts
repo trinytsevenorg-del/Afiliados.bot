@@ -24,6 +24,10 @@ const Env = z.object({
   ML_REFRESH_TOKEN: opcional,
   TELEGRAM_BOT_TOKEN: opcional,
   DATA_DIR: z.string().default("data"),
+  /** Postgres (ex.: Supabase, Session pooler). Guarda a sessão do WhatsApp automático. */
+  DATABASE_URL: opcional,
+  WA_INTERVALO_MIN: z.coerce.number().int().min(1).default(10),
+  WA_MAX_DIA: z.coerce.number().int().min(1).default(40),
 });
 
 export type Config = z.infer<typeof Env>;
