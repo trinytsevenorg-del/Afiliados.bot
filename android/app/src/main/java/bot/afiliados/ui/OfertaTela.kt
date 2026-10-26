@@ -12,7 +12,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -130,7 +129,7 @@ fun OfertaTela(app: AfiliadosApp, nav: NavHostController, produtoInicial: Long?)
                 }
                 if (atual != null) item {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Versao.entries.forEach { v -> FilterChip(versao == v, { versao = v; editado = false }, label = { Text(v.rotulo) }) }
+                        Versao.entries.forEach { v -> Chip(versao == v, { versao = v; editado = false }, label = { Text(v.rotulo) }) }
                     }
                 }
                 item { Campo(texto, { texto = it; editado = true }, "Texto da oferta (sem o link)", linhas = 6, ajuda = "O link de afiliado entra no final, sem alteração") }

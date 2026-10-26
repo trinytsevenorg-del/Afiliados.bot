@@ -17,6 +17,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -82,14 +86,22 @@ fun AppRaiz(app: AfiliadosApp, atividade: MainActivity, desbloqueado: Boolean, a
     Scaffold(
         bottomBar = {
             if (abas.any { it.rota == rotaAtual }) {
-                NavigationBar {
-                    abas.forEach { a ->
-                        NavigationBarItem(
-                            selected = rotaAtual == a.rota,
-                            onClick = { nav.navigate(a.rota) { popUpTo("inicio") { saveState = true }; launchSingleTop = true; restoreState = true } },
-                            icon = { Icon(a.icone, null) },
-                            label = { Text(a.nome) },
-                        )
+                Column {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
+                        abas.forEach { a ->
+                            NavigationBarItem(
+                                selected = rotaAtual == a.rota,
+                                onClick = { nav.navigate(a.rota) { popUpTo("inicio") { saveState = true }; launchSingleTop = true; restoreState = true } },
+                                icon = { Icon(a.icone, null) },
+                                label = { Text(a.nome) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = Color.Transparent,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
+                            )
+                        }
                     }
                 }
             }

@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -72,7 +71,7 @@ fun ComissoesTela(app: AfiliadosApp, nav: NavHostController) {
             }
             if (lista.isEmpty()) item { EstadoVazio("Nenhuma comissão registrada", "Quando o painel da loja mostrar uma venda, registre aqui.") }
             items(lista, key = Comissao::id) { c ->
-                Card(Modifier.fillMaxWidth().clickable { editando = c }) {
+                Cartao(Modifier.fillMaxWidth().clickable { editando = c }) {
                     Row(Modifier.padding(12.dp)) {
                         Column(Modifier.weight(1f)) {
                             Text(produtos.firstOrNull { it.id == c.produtoId }?.nome ?: "Sem produto associado", style = MaterialTheme.typography.titleSmall)

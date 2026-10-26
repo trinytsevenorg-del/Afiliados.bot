@@ -26,6 +26,8 @@ class AfiliadosApp : Application() {
     val backend by lazy { Backend({ prefs.backendUrl }, { cofre.ler(TOKEN) }) }
     val repo by lazy { Repositorio(banco.dao(), backend, prefs) }
     val backup by lazy { Backup(banco.dao()) }
+    /** Tema atual, observado pela interface. */
+    val tema by lazy { androidx.compose.runtime.mutableStateOf(prefs.tema) }
 
     override fun onCreate() {
         super.onCreate()

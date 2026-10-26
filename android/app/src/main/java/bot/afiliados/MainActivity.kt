@@ -5,7 +5,9 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -16,6 +18,7 @@ import androidx.fragment.app.FragmentActivity
 import bot.afiliados.domain.Links
 import bot.afiliados.ui.AppRaiz
 import bot.afiliados.ui.TemaAfiliados
+import bot.afiliados.ui.temaEscuro
 
 class MainActivity : FragmentActivity() {
     /** Link recebido pelo "Compartilhar" de outro app, ou item vindo de notificação. */
@@ -33,7 +36,13 @@ class MainActivity : FragmentActivity() {
         desbloqueado.value = !app.prefs.bloqueioLocal
         if (Build.VERSION.SDK_INT >= 33) pedirNotificacao.launch(Manifest.permission.POST_NOTIFICATIONS)
         setContent {
-            TemaAfiliados {
+            val escuro = temaEscuro(app.tema.value)
+            LaunchedEffect(escuro) {
+                val barra = if (escuro) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+                enableEdgeToEdge(barra, barra)
+            }
+            TemaAfiliados(app.tema.value) {
                 AppRaiz(app = app, atividade = this, desbloqueado = desbloqueado.value, aoDesbloquear = ::desbloquear)
             }
         }

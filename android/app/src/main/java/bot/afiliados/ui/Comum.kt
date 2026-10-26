@@ -8,7 +8,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,9 +22,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -36,10 +33,6 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,26 +50,11 @@ import androidx.compose.ui.unit.dp
 import bot.afiliados.domain.EstadoFila
 import bot.afiliados.domain.SituacaoPreco
 
-private val Claro = lightColorScheme(primary = Color(0xFF1F5FD1), secondary = Color(0xFF00796B), tertiary = Color(0xFFB45309))
-private val Escuro = darkColorScheme(primary = Color(0xFF9DBBFF), secondary = Color(0xFF6FD3C3), tertiary = Color(0xFFF5B66B))
-
-@Composable
-fun TemaAfiliados(conteudo: @Composable () -> Unit) {
-    val escuro = isSystemInDarkTheme()
-    val ctx = LocalContext.current
-    val cores: ColorScheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> if (escuro) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
-        escuro -> Escuro
-        else -> Claro
-    }
-    MaterialTheme(colorScheme = cores, content = conteudo)
-}
-
 val espaco = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
 
 @Composable
 fun Secao(titulo: String, modifier: Modifier = Modifier, acao: (@Composable () -> Unit)? = null, conteudo: @Composable () -> Unit) {
-    Card(modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+    Cartao(modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(titulo, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -101,7 +79,7 @@ fun EstadoVazio(titulo: String, texto: String, modifier: Modifier = Modifier, ac
 fun Aviso(texto: String, erro: Boolean = false) {
     val c = if (erro) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer
     val t = if (erro) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer
-    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = c)) {
+    Cartao(Modifier.fillMaxWidth(), colors = CardDefaults.outlinedCardColors(containerColor = c)) {
         Text(texto, Modifier.padding(12.dp), color = t, style = MaterialTheme.typography.bodyMedium)
     }
 }

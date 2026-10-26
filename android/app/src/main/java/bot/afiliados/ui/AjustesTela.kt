@@ -168,6 +168,15 @@ fun AjustesTela(app: AfiliadosApp, nav: NavHostController) {
             }
         }
         item {
+            Secao("Aparência") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("sistema" to "Sistema", "preto" to "Preto", "branco" to "Branco").forEach { (id, nome) ->
+                        Chip(app.tema.value == id, { app.tema.value = id; app.prefs.tema = id }, label = { Text(nome) })
+                    }
+                }
+            }
+        }
+        item {
             Secao("Segurança") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Pedir digital ou senha do aparelho ao abrir", Modifier.weight(1f))

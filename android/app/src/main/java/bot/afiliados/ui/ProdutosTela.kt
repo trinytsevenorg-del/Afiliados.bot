@@ -21,10 +21,8 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.ViewList
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -99,11 +97,11 @@ fun ProdutosTela(app: AfiliadosApp, nav: NavHostController) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(busca, { busca = it }, Modifier.fillMaxWidth(), placeholder = { Text("Buscar por nome") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(Filtro.entries) { f -> FilterChip(filtro == f, { filtro = f }, label = { Text(f.rotulo) }) }
-                        items(Marketplace.entries) { m -> FilterChip(loja == m, { loja = if (loja == m) null else m }, label = { Text(m.rotulo) }) }
+                        items(Filtro.entries) { f -> Chip(filtro == f, { filtro = f }, label = { Text(f.rotulo) }) }
+                        items(Marketplace.entries) { m -> Chip(loja == m, { loja = if (loja == m) null else m }, label = { Text(m.rotulo) }) }
                     }
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(nichos, key = Nicho::id) { n -> FilterChip(nichoId == n.id, { nichoId = if (nichoId == n.id) null else n.id }, label = { Text("${n.icone} ${n.nome}") }) }
+                        items(nichos, key = Nicho::id) { n -> Chip(nichoId == n.id, { nichoId = if (nichoId == n.id) null else n.id }, label = { Text("${n.icone} ${n.nome}") }) }
                     }
                 }
             }
@@ -127,7 +125,7 @@ private fun Imagem(url: String?, modifier: Modifier) {
     if (url != null && url.startsWith("https://")) {
         AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier.clip(RoundedCornerShape(8.dp)))
     } else {
-        Card(modifier) { Text("Sem imagem", Modifier.padding(8.dp), style = MaterialTheme.typography.labelSmall) }
+        Cartao(modifier) { Text("Sem imagem", Modifier.padding(8.dp), style = MaterialTheme.typography.labelSmall) }
     }
 }
 
@@ -142,7 +140,7 @@ private fun Selos(app: AfiliadosApp, p: Produto) {
 
 @Composable
 private fun CartaoLista(app: AfiliadosApp, p: Produto, nicho: String?, aoClicar: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = aoClicar)) {
+    Cartao(Modifier.fillMaxWidth().clickable(onClick = aoClicar)) {
         Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Imagem(p.imagemUrl, Modifier.size(64.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -156,7 +154,7 @@ private fun CartaoLista(app: AfiliadosApp, p: Produto, nicho: String?, aoClicar:
 
 @Composable
 private fun CartaoGrade(app: AfiliadosApp, p: Produto, nicho: String?, aoClicar: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = aoClicar)) {
+    Cartao(Modifier.fillMaxWidth().clickable(onClick = aoClicar)) {
         Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Imagem(p.imagemUrl, Modifier.fillMaxWidth().aspectRatio(1f))
             Text(p.nome, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)

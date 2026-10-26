@@ -16,7 +16,6 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -60,7 +59,7 @@ fun InicioTela(app: AfiliadosApp, nav: NavHostController) {
     LazyColumn(contentPadding = espaco, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { TopAppBar(title = { Text("Afiliados.bot", fontWeight = FontWeight.Bold) }) }
         if (!app.backend.configurado) item {
-            Card(Modifier.fillMaxWidth().clickable { nav.irPara("ajustes") }) {
+            Cartao(Modifier.fillMaxWidth().clickable { nav.irPara("ajustes") }) {
                 Text("Backend não configurado. O catálogo funciona, mas IA, Shopee, Mercado Livre e Telegram ficam desligados. Toque para configurar.", Modifier.padding(16.dp))
             }
         }
@@ -128,7 +127,7 @@ private fun Atalho(nome: String, icone: ImageVector, aoClicar: () -> Unit) {
 
 @Composable
 private fun Numero(nome: String, valor: Int, modifier: Modifier, ajuda: String? = null) {
-    Card(modifier) {
+    Cartao(modifier) {
         Column(Modifier.padding(12.dp)) {
             Text("$valor", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text(nome, style = MaterialTheme.typography.bodyMedium)

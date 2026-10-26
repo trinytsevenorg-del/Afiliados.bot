@@ -17,11 +17,9 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -80,7 +78,7 @@ fun FilaTela(app: AfiliadosApp, nav: NavHostController) {
 
     Scaffold(topBar = {
         TopAppBar(title = { Text("Fila de publicação") }, actions = {
-            FilterChip(verConcluidos, { verConcluidos = !verConcluidos }, label = { Text("Ver concluídos") }, modifier = Modifier.padding(end = 8.dp))
+            Chip(verConcluidos, { verConcluidos = !verConcluidos }, label = { Text("Ver concluídos") }, modifier = Modifier.padding(end = 8.dp))
         })
     }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = espaco, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -88,7 +86,7 @@ fun FilaTela(app: AfiliadosApp, nav: NavHostController) {
                 EstadoVazio("Fila vazia", "Crie uma oferta a partir de um produto e adicione à fila.") { Button(onClick = { nav.irPara(Rotas.oferta()) }) { Text("Criar oferta") } }
             }
             itemsIndexed(lista, key = { _, i -> i.id }) { idx, i ->
-                Card(Modifier.fillMaxWidth().clickable { nav.irPara(Rotas.item(i.id)) }) {
+                Cartao(Modifier.fillMaxWidth().clickable { nav.irPara(Rotas.item(i.id)) }) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(nomes[i.produtoId] ?: "Produto", style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -31,7 +31,7 @@ Projeto separado da BattleHub. Não compartilha código, banco nem contas.
 | Backup JSON (exportar/importar sem duplicar) | Funciona |
 | Bloqueio por digital/senha do aparelho | Opcional, em Ajustes |
 
-O que depende de credencial ou aprovação está em [`docs/INTEGRACOES.md`](docs/INTEGRACOES.md).
+Passo a passo de uso: [`docs/COMO-USAR.md`](docs/COMO-USAR.md). O que depende de credencial ou aprovação: [`docs/INTEGRACOES.md`](docs/INTEGRACOES.md).
 
 ## Rodar o backend
 

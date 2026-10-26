@@ -67,6 +67,11 @@ class Preferencias(ctx: Context) {
         get() = p.getInt("validadePrecoHoras", 6)
         set(v) = p.edit().putInt("validadePrecoHoras", v.coerceIn(1, 168)).apply()
 
+    /** "sistema", "preto" ou "branco". */
+    var tema: String
+        get() = p.getString("tema", "sistema") ?: "sistema"
+        set(v) = p.edit().putString("tema", v).apply()
+
     var bloqueioLocal: Boolean
         get() = p.getBoolean("bloqueioLocal", false)
         set(v) = p.edit().putBoolean("bloqueioLocal", v).apply()

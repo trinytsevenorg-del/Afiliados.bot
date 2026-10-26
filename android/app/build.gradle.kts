@@ -38,6 +38,10 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+            System.getProperty("prints")?.let { pasta -> it.systemProperty("prints", pasta) }
+        }
     }
 }
 
