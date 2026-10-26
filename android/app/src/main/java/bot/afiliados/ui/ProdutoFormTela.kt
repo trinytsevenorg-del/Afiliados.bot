@@ -81,6 +81,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
     var descricao by mutableStateOf("")
     var caracteristicas by mutableStateOf("")
     var observacoes by mutableStateOf("")
+    var cupom by mutableStateOf("")
     var gerandoLink by mutableStateOf(false)
     var lendoPrint by mutableStateOf(false)
     /** Preço lido do print: se continuar igual ao salvar, conta como "confirmado por você". */
@@ -97,7 +98,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
         precoAnterior = p.precoAnterior?.let { Precos.formatar(it).removePrefix("R$ ") }.orEmpty()
         anteriorComprovado = p.precoAnteriorComprovado
         comissao = p.comissaoPercentual?.toString().orEmpty(); comissaoOrigem = p.comissaoOrigem
-        imagem = p.imagemUrl.orEmpty(); fotos = p.fotoLocal?.lines()?.filter(String::isNotBlank).orEmpty(); descricao = p.descricaoOriginal; caracteristicas = p.caracteristicas; observacoes = p.observacoes
+        imagem = p.imagemUrl.orEmpty(); fotos = p.fotoLocal?.lines()?.filter(String::isNotBlank).orEmpty(); descricao = p.descricaoOriginal; caracteristicas = p.caracteristicas; observacoes = p.observacoes; cupom = p.cupom.orEmpty()
     }
 
     fun analisar() = viewModelScope.launch {
@@ -134,6 +135,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
             val imagens = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { uris.take(10).map { bot.afiliados.data.Imagens.paraPrint(cr, it) } }
             val d = repo.backend.lerPrint(imagens).dados
             d.nome?.let { nome = it }
+            d.cupom?.let { cupom = it }
             // Recorta a foto do produto do próprio print (a IA só diz onde ela está).
             d.foto?.let { f ->
                 uris.getOrNull(f.imagem)?.let { u ->
@@ -225,6 +227,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
             descricaoOriginal = descricao.trim(),
             caracteristicas = caracteristicas.trim(),
             observacoes = observacoes.trim(),
+            cupom = cupom.trim().uppercase().ifBlank { null },
             situacaoPreco = when {
                 veioDaFonte -> SituacaoPreco.VERIFICADO
                 doPrint -> SituacaoPreco.VERIFICADO_MANUAL
@@ -385,6 +388,7 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
                         }
                     }
                 }
+                item { Campo(vm.cupom, { vm.cupom = it.uppercase().filter { c -> c.isLetterOrDigit() || c == '_' || c == '-' }.take(30) }, "Cupom (opcional)", ajuda = "Só código que existe de verdade. Vazio = usa o cupom padrão de Ajustes ou não mostra a linha.") }
                 item { Campo(vm.caracteristicas, { vm.caracteristicas = it }, "Características comprovadas (uma por linha)", linhas = 3, ajuda = "A IA só usa o que estiver aqui e na descrição") }
                 item { Campo(vm.descricao, { vm.descricao = it }, "Descrição original", linhas = 3) }
                 item { Campo(vm.observacoes, { vm.observacoes = it }, "Observações pessoais", linhas = 2) }

@@ -45,6 +45,23 @@ A comissão estimada sai sozinha: preço × % de ganho (ex.: R$ 100 × 17% = R$ 
 
 ## Parte 3 · Criar a oferta
 
+**Modelo (padrão):** a mensagem sai no formato
+
+```
+💥 Título curto da IA
+
+De: ~R$ 32,00~ ❌
+💸 Por: *R$ 21,00* 🔥
+
+🔗 Compre aqui: (seu link)
+
+🎟️ Use o cupom: *CUPOM*
+
+⚠️ Promoção sujeita a alteração a qualquer momento.
+```
+
+Preços, cupom e link vêm do produto, nunca da IA. Sem preço riscado comprovado, a linha "De" some. Sem cupom, a linha do cupom some. Para mudar o modelo ou pôr um cupom padrão: **Ajustes → Modelo da mensagem**.
+
 1. Abra o produto → **Criar oferta / texto**.
 2. Escolha o canal e toque em **Gerar com IA**.
 3. Troque entre as versões: WhatsApp, Canal, Objetiva, Chamativa e Completa.

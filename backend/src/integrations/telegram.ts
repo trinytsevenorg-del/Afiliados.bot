@@ -81,6 +81,8 @@ export class Telegram {
     imagem?: string | null;
     foto?: FotoEnvio | null;
     fotos?: FotoEnvio[] | null;
+    /** "html": o texto vem com <b>, <s>, <i> (convertido do formato do WhatsApp). */
+    formato?: "html" | null;
   }) {
     await this.carregar();
     const anterior = this.enviados.get(p.chave);
@@ -91,25 +93,27 @@ export class Telegram {
     const cabe = p.texto.length <= 1024;
     const fotos = [...(p.fotos ?? []), ...(p.foto ? [p.foto] : [])].slice(0, 10);
     const arquivo = (f: FotoEnvio) => new Blob([Buffer.from(f.base64, "base64")], { type: f.tipo });
+    const pm = p.formato === "html" ? { parse_mode: "HTML" } : {};
     let msg: Msg;
     if (fotos.length > 1) {
       // Álbum: o texto vai na legenda da primeira foto (ou em mensagem própria, se for longo).
       const form = new FormData();
       form.append("chat_id", p.chatId);
-      form.append("media", JSON.stringify(fotos.map((_, i) => ({ type: "photo", media: `attach://foto${i}`, ...(i === 0 && cabe ? { caption: p.texto } : {}) }))));
+      form.append("media", JSON.stringify(fotos.map((_, i) => ({ type: "photo", media: `attach://foto${i}`, ...(i === 0 && cabe ? { caption: p.texto, ...pm } : {}) }))));
       fotos.forEach((f, i) => form.append(`foto${i}`, arquivo(f), `foto${i}.jpg`));
       const album = await this.api<Msg[]>("sendMediaGroup", form);
-      msg = cabe ? album[0]! : await this.api<Msg>("sendMessage", { chat_id: p.chatId, text: p.texto });
+      msg = cabe ? album[0]! : await this.api<Msg>("sendMessage", { chat_id: p.chatId, text: p.texto, ...pm });
     } else if (fotos.length === 1 && cabe) {
       const form = new FormData();
       form.append("chat_id", p.chatId);
       form.append("caption", p.texto);
+      if (p.formato === "html") form.append("parse_mode", "HTML");
       form.append("photo", arquivo(fotos[0]!), "produto.jpg");
       msg = await this.api<Msg>("sendPhoto", form);
     } else if (p.imagem && cabe) {
-      msg = await this.api<Msg>("sendPhoto", { chat_id: p.chatId, photo: p.imagem, caption: p.texto });
+      msg = await this.api<Msg>("sendPhoto", { chat_id: p.chatId, photo: p.imagem, caption: p.texto, ...pm });
     } else {
-      msg = await this.api<Msg>("sendMessage", { chat_id: p.chatId, text: p.texto, link_preview_options: { is_disabled: false } });
+      msg = await this.api<Msg>("sendMessage", { chat_id: p.chatId, text: p.texto, link_preview_options: { is_disabled: false }, ...pm });
     }
     const pub: Publicacao = { chave: p.chave, chatId: String(msg.chat.id), messageId: msg.message_id, publicadoEm: new Date().toISOString() };
     this.enviados.set(p.chave, pub);

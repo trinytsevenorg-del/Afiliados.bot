@@ -6,7 +6,7 @@ import { fakeFetch, json } from "./helpers.js";
 const resposta = (obj: unknown) => json({ candidates: [{ content: { parts: [{ text: JSON.stringify(obj) }] } }] });
 const print = {
   marketplace: "mercadolivre", nome: "Torneira Gourmet Preta", preco: 34.94, precoAnterior: 60.25, comissaoPercentual: 17,
-  caracteristicas: ["Cor e Acabamento: Preto | Parede", "Frete grátis acima de R$ 19"], descricao: null, avaliacao: 4.8, urgencia: null, foto: { imagem: 0, caixa: [40, 0, 460, 1000] }, avisos: [],
+  caracteristicas: ["Cor e Acabamento: Preto | Parede", "Frete grátis acima de R$ 19"], descricao: null, avaliacao: 4.8, urgencia: null, cupom: null, foto: { imagem: 0, caixa: [40, 0, 460, 1000] }, avisos: [],
 };
 
 describe("Gemini (grátis)", () => {

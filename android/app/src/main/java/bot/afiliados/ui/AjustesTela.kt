@@ -168,6 +168,24 @@ fun AjustesTela(app: AfiliadosApp, nav: NavHostController) {
             }
         }
         item {
+            var modelo by remember { mutableStateOf(app.prefs.modeloMensagem) }
+            var cupomPadrao by remember { mutableStateOf(app.prefs.cupomPadrao) }
+            Secao("Modelo da mensagem") {
+                Text("Campos: {titulo} {de} {por} {link} {cupom}. Linha com campo vazio some sozinha. *negrito* e ~riscado~ funcionam no WhatsApp e no Telegram.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Campo(modelo, { modelo = it }, "Modelo", linhas = 10)
+                Campo(cupomPadrao, { cupomPadrao = it }, "Cupom padrão (opcional)", ajuda = "Usado quando o produto não tem cupom próprio. Só código válido.")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {
+                        if (!modelo.contains(bot.afiliados.domain.Mensagem.LINK)) { ctx.avisar("O modelo precisa ter {link}"); return@Button }
+                        app.prefs.modeloMensagem = modelo; app.prefs.cupomPadrao = cupomPadrao; cupomPadrao = app.prefs.cupomPadrao
+                        ctx.avisar("Modelo salvo")
+                    }) { Text("Salvar") }
+                    TextButton(onClick = { modelo = bot.afiliados.domain.Mensagem.MODELO_PADRAO }) { Text("Voltar ao padrão") }
+                }
+            }
+        }
+        item {
             Secao("Aparência") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("sistema" to "Sistema", "preto" to "Preto", "branco" to "Branco").forEach { (id, nome) ->

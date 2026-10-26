@@ -72,6 +72,16 @@ class Preferencias(ctx: Context) {
         get() = p.getString("tema", "sistema") ?: "sistema"
         set(v) = p.edit().putString("tema", v).apply()
 
+    /** Modelo das mensagens: {titulo} {de} {por} {link} {cupom}. */
+    var modeloMensagem: String
+        get() = p.getString("modeloMensagem", null) ?: bot.afiliados.domain.Mensagem.MODELO_PADRAO
+        set(v) = p.edit().putString("modeloMensagem", v).apply()
+
+    /** Cupom usado quando o produto não tem um próprio. */
+    var cupomPadrao: String
+        get() = p.getString("cupomPadrao", "") ?: ""
+        set(v) = p.edit().putString("cupomPadrao", v.trim().uppercase().filter { it.isLetterOrDigit() || it == '_' || it == '-' }.take(30)).apply()
+
     var bloqueioLocal: Boolean
         get() = p.getBoolean("bloqueioLocal", false)
         set(v) = p.edit().putBoolean("bloqueioLocal", v).apply()

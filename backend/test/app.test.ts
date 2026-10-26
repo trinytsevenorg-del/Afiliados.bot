@@ -121,6 +121,14 @@ describe("Telegram", () => {
     expect(onze.statusCode).toBe(400);
   });
 
+  it("formato html liga o parse_mode do Telegram", async () => {
+    const { f, chamadas } = fakeFetch(() => json({ ok: true, result: { message_id: 3, chat: { id: -1 } } }));
+    const tg = new Telegram({ token: "123:abc", dataDir: cfgTeste().DATA_DIR }, f);
+    const a = await app({}, tg);
+    await a.inject({ method: "POST", url: "/api/publish/telegram", headers: auth, payload: { chave: "fila-7-abcdef", chatId: "@meucanal", texto: "Por: <b>R$ 21,00</b>", formato: "html" } });
+    expect(JSON.parse(String(chamadas[0]!.init.body)).parse_mode).toBe("HTML");
+  });
+
   it("falha do Telegram não vira 'publicado'", async () => {
     const { f } = fakeFetch(() => json({ ok: false, description: "Forbidden: bot is not a member" }, 403));
     const tg = new Telegram({ token: "123:abc", dataDir: cfgTeste().DATA_DIR }, f);

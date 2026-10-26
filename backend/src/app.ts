@@ -141,6 +141,7 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
         imagem: z.string().max(2048).nullish(),
         foto: FotoEnvio.nullish(),
         fotos: z.array(FotoEnvio).max(10).nullish(),
+        formato: z.enum(["html"]).nullish(),
       })
       .parse(req.body);
     if (b.imagem && !b.imagem.startsWith("https://")) throw new LinkInvalido("A imagem precisa ser HTTPS");

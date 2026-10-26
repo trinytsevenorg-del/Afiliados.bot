@@ -23,7 +23,7 @@ export const PedidoTexto = z.object({
 export type PedidoTexto = z.infer<typeof PedidoTexto>;
 
 export const TextosGerados = z.object({
-  titulo: z.string().describe("Título promocional curto, até 70 caracteres"),
+  titulo: z.string().describe("Título curto e chamativo com 1 ou 2 emojis no fim, até 70 caracteres, sem preço e sem link (ex.: \"Rider R1: conforto e estilo para seus pés! 🇧🇷☀️\")"),
   whatsapp: z.string().describe("Mensagem curta para WhatsApp, com emojis moderados, sem link"),
   canal: z.string().describe("Texto para canal de ofertas (Telegram), sem link"),
   descricao: z.string().describe("Descrição um pouco mais completa, só com fatos fornecidos"),
@@ -71,6 +71,7 @@ export const DadosPrint = z.object({
   descricao: z.string().nullable().describe("Trecho da descrição visível, se houver"),
   avaliacao: z.number().nullable().describe("Nota média visível (ex.: 4.8), se houver"),
   urgencia: z.string().nullable().describe("Prazo de oferta escrito na tela (ex.: 'termina em 2h'), se houver"),
+  cupom: z.string().nullable().describe("CÓDIGO de cupom escrito na tela (ex.: 'Use o cupom PROMO10' → PROMO10). Null se não houver um código. Desconto sem código não conta"),
   foto: z
     .object({
       imagem: z.number().int().describe("Índice (começando em 0) da imagem onde está a foto principal do produto"),
@@ -280,6 +281,7 @@ export function limparPrint(d: DadosPrint, nImagens = 1): DadosPrint {
   return {
     ...d,
     nome: d.nome?.trim().slice(0, 200) || null,
+    cupom: /^[A-Za-z0-9_-]{3,30}$/.test(d.cupom?.trim() ?? "") ? d.cupom!.trim().toUpperCase() : null,
     preco,
     precoAnterior,
     comissaoPercentual: comissao,

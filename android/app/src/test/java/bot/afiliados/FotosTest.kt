@@ -43,11 +43,12 @@ class FotosTest {
         migracoes.createDatabase("migracao.db", 1).use { db ->
             db.execSQL("INSERT INTO produtos (nome, linkOriginal, chave, marketplace, precoAnteriorComprovado, descricaoOriginal, caracteristicas, observacoes, situacaoLink, situacaoPreco, arquivado, criadoEm, atualizadoEm) VALUES ('Fone','https://a.com','k','OUTRO',0,'','','','NAO_VERIFICADO','NUNCA_VERIFICADO',0,0,0)")
         }
-        val db = migracoes.runMigrationsAndValidate("migracao.db", 2, true, BancoAfiliados.MIGRACAO_1_2)
-        db.query("SELECT nome, fotoLocal FROM produtos").use { c ->
+        val db = migracoes.runMigrationsAndValidate("migracao.db", 3, true, BancoAfiliados.MIGRACAO_1_2, BancoAfiliados.MIGRACAO_2_3)
+        db.query("SELECT nome, fotoLocal, cupom FROM produtos").use { c ->
             assertTrue(c.moveToFirst())
             assertEquals("Fone", c.getString(0))
             assertTrue(c.isNull(1))
+            assertTrue(c.isNull(2))
         }
     }
 }

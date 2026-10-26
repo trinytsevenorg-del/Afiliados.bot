@@ -57,6 +57,8 @@ data class Produto(
     /** Fatos do produto, um por linha. A IA só usa isso. */
     val caracteristicas: String = "",
     val observacoes: String = "",
+    /** Código de cupom (opcional). Sem cupom, a linha some da mensagem. */
+    val cupom: String? = null,
     val situacaoLink: SituacaoLink = SituacaoLink.NAO_VERIFICADO,
     val situacaoPreco: SituacaoPreco = SituacaoPreco.NUNCA_VERIFICADO,
     val ultimaVerificacao: Long? = null,

@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 private enum class Versao(val rotulo: String, val de: (TextoPromocional) -> String) {
+    MODELO("Modelo (padrão)", { it.titulo }),
     WHATSAPP("WhatsApp", { it.whatsapp }),
     CANAL("Canal de ofertas", { it.canal }),
     OBJETIVA("Objetiva", { it.objetiva }),
@@ -63,7 +64,7 @@ fun OfertaTela(app: AfiliadosApp, nav: NavHostController, produtoInicial: Long?)
     val produto = produtos.firstOrNull { it.id == produtoId }
 
     var textoId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var versao by rememberSaveable { mutableStateOf(Versao.WHATSAPP) }
+    var versao by rememberSaveable { mutableStateOf(Versao.MODELO) }
     var texto by rememberSaveable { mutableStateOf("") }
     var editado by rememberSaveable { mutableStateOf(false) }
     var canalId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -72,8 +73,21 @@ fun OfertaTela(app: AfiliadosApp, nav: NavHostController, produtoInicial: Long?)
     var erro by remember { mutableStateOf<String?>(null) }
 
     val atual = textos.firstOrNull { it.id == textoId } ?: textos.firstOrNull()
-    LaunchedEffect(atual?.id, versao) {
-        if (atual != null && !editado) { texto = versao.de(atual); avisos = atual.avisos.lines().filter(String::isNotBlank) }
+    // Modelo: preços, cupom e link vêm do produto (nunca da IA); a IA só dá o título.
+    fun textoModelo() = produto?.let { p ->
+        bot.afiliados.domain.Mensagem.aplicarModelo(
+            app.prefs.modeloMensagem,
+            titulo = atual?.titulo?.ifBlank { null } ?: p.nome.take(70),
+            de = p.precoAnterior.takeIf { p.precoAnteriorComprovado && (p.preco == null || (p.precoAnterior ?: 0.0) > p.preco) },
+            por = p.preco,
+            cupom = p.cupom?.ifBlank { null } ?: app.prefs.cupomPadrao.ifBlank { null },
+        )
+    }.orEmpty()
+    LaunchedEffect(atual?.id, versao, produto) {
+        if (editado) return@LaunchedEffect
+        if (versao == Versao.MODELO) texto = textoModelo()
+        else if (atual != null) texto = versao.de(atual)
+        avisos = atual?.avisos?.lines()?.filter(String::isNotBlank).orEmpty()
     }
     val canal = canais.firstOrNull { it.id == canalId }
     val nichos by repo.dao.nichos().collectAsStateWithLifecycle(emptyList())
@@ -81,9 +95,7 @@ fun OfertaTela(app: AfiliadosApp, nav: NavHostController, produtoInicial: Long?)
     LaunchedEffect(produto?.id, nichos) {
         if (canalId == null) canalId = nichos.firstOrNull { it.id == produto?.nichoId }?.canalId
     }
-    LaunchedEffect(canal?.tipo) {
-        if (!editado) versao = if (canal?.tipo == TipoCanal.TELEGRAM) Versao.CANAL else Versao.WHATSAPP
-    }
+
 
     fun gerar() {
         val p = produto ?: return
@@ -127,22 +139,22 @@ fun OfertaTela(app: AfiliadosApp, nav: NavHostController, produtoInicial: Long?)
                 if (textos.size > 1) item {
                     Escolha("Versão salva", textos, atual, { "${Repositorio.dataHora(it.criadoEm)} · ${if (it.origem == "ia") "IA" else "manual"}" }, { textoId = it.id; editado = false })
                 }
-                if (atual != null) item {
+                item {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Versao.entries.forEach { v -> Chip(versao == v, { versao = v; editado = false }, label = { Text(v.rotulo) }) }
+                        Versao.entries.filter { it == Versao.MODELO || atual != null }.forEach { v -> Chip(versao == v, { versao = v; editado = false }, label = { Text(v.rotulo) }) }
                     }
                 }
-                item { Campo(texto, { texto = it; editado = true }, "Texto da oferta (sem o link)", linhas = 6, ajuda = "O link de afiliado entra no final, sem alteração") }
+                item { Campo(texto, { texto = it; editado = true }, "Texto da oferta", linhas = 8, ajuda = if (texto.contains(bot.afiliados.domain.Mensagem.LINK)) "{link} vira o seu link de afiliado, sem alteração. *negrito* e ~riscado~ funcionam no WhatsApp e no Telegram." else "O link de afiliado entra no final, sem alteração") }
                 if (atual?.hashtags?.isNotBlank() == true) item { Text("Hashtags: ${atual.hashtags}", style = MaterialTheme.typography.bodySmall) }
                 if (texto.isNotBlank() && produto.linkAfiliado != null) item {
-                    Secao("Prévia") { Text(Mensagem.montar(texto, produto.linkAfiliado, atual?.hashtags?.split(' ').orEmpty())) }
+                    Secao("Prévia") { Text(Mensagem.montar(texto, produto.linkAfiliado, if (texto.contains(Mensagem.LINK)) emptyList() else atual?.hashtags?.split(' ').orEmpty())) }
                 }
                 item {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(enabled = texto.isNotBlank(), onClick = { escopo.launch { textoId = repo.salvarTextoManual(produto.id, texto); editado = false; ctx.avisar("Texto salvo como nova versão") } }) { Text("Salvar como versão") }
                         Button(enabled = texto.isNotBlank() && produto.linkAfiliado != null, onClick = {
                             escopo.launch {
-                                when (val r = repo.adicionarAFila(produto, texto, atual?.hashtags.orEmpty(), canalId)) {
+                                when (val r = repo.adicionarAFila(produto, texto, if (texto.contains(Mensagem.LINK)) "" else atual?.hashtags.orEmpty(), canalId)) {
                                     is Repositorio.ResultadoFila.Criado -> { nav.popBackStack(); nav.irPara(Rotas.item(r.id)) }
                                     is Repositorio.ResultadoFila.JaNaFila -> { ctx.avisar("Esse produto já está na fila deste canal"); nav.irPara(Rotas.item(r.item.id)) }
                                     is Repositorio.ResultadoFila.SemLink -> ctx.avisar(r.motivo)

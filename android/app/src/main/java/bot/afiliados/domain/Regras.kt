@@ -108,14 +108,72 @@ object Precos {
 }
 
 object Mensagem {
-    /** O link entra sempre no final, exatamente como foi salvo. */
+    /** Marca onde o link entra no modelo. Fica no texto salvo; vira o link só na hora de enviar. */
+    const val LINK = "{link}"
+
+    val MODELO_PADRAO = """
+        💥 {titulo}
+
+        De: ~{de}~ ❌
+        💸 Por: *{por}* 🔥
+
+        🔗 Compre aqui: {link}
+
+        🎟️ Use o cupom: *{cupom}*
+
+        ⚠️ Promoção sujeita a alteração a qualquer momento.
+    """.trimIndent()
+
+    /**
+     * Preenche o modelo. Linha com campo vazio some (sem preço anterior
+     * comprovado não tem "De"; sem cupom não tem cupom). Nada é inventado.
+     */
+    fun aplicarModelo(modelo: String, titulo: String, de: Double?, por: Double?, cupom: String?): String {
+        val valores = mapOf(
+            "titulo" to titulo.trim(),
+            "de" to (de?.let { Precos.formatar(it) } ?: ""),
+            "por" to (por?.let { Precos.formatar(it) } ?: ""),
+            "cupom" to cupom?.trim().orEmpty(),
+        )
+        val linhas = modelo.lines().mapNotNull { linha ->
+            var l = linha
+            for ((k, v) in valores) {
+                if (l.contains("{$k}")) {
+                    if (v.isEmpty()) return@mapNotNull null
+                    l = l.replace("{$k}", v)
+                }
+            }
+            l
+        }
+        // Sem linhas em branco repetidas, sobra de campos removidos.
+        return linhas.joinToString("\n").replace(Regex("\n{3,}"), "\n\n").trim()
+    }
+
+    /** O link entra no lugar de {link}, exatamente como foi salvo; sem a marca, vai no final. */
     fun montar(texto: String, link: String, hashtags: List<String> = emptyList()): String {
         val corpo = texto.trim()
+        if (corpo.contains(LINK)) return corpo.replace(LINK, link.trim())
         val tags = hashtags.filter { it.isNotBlank() }.joinToString(" ")
         return buildString {
             append(corpo)
             if (tags.isNotEmpty()) append("\n\n").append(tags)
             append("\n\n").append(link.trim())
         }
+    }
+
+    /**
+     * Converte a formatação do WhatsApp (*negrito*, ~riscado~, _itálico_) para o HTML do Telegram.
+     * Escapa o resto para nenhum caractere virar formatação por acidente.
+     */
+    fun paraTelegramHtml(texto: String): String {
+        var t = texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        fun troca(marca: Char, tag: String) {
+            val m = Regex.escape(marca.toString())
+            t = t.replace(Regex("(?<![\\w$m])$m([^$m\\n]+?)$m(?![\\w$m])")) { "<$tag>${it.groupValues[1]}</$tag>" }
+        }
+        troca('*', "b")
+        troca('~', "s")
+        troca('_', "i")
+        return t
     }
 }
