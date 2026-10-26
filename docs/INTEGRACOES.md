@@ -27,7 +27,7 @@ Atualizado em 26/10/2026. Cada integração mostra o estado real em **Ajustes �
 
 - **Código pronto:** `POST /api/copy/generate` com saída estruturada. A IA recebe só os dados salvos do produto.
 - **Proteções:** o backend confere cada versão. Preço que não está nos dados, porcentagem sem desconto comprovado, "mais barato", falsa escassez, urgência sem fato, promessa de frete ou de ganho e link no texto fazem pedir uma correção à IA. Se o problema continuar, o texto volta com avisos em vermelho no app.
-- **Leitura de print:** `POST /api/product/from-images` (até 3 imagens). A IA copia só o que está escrito, e o backend descarta preço anterior menor que o atual, comissão acima de 50% e nota fora de 0–5.
+- **Leitura de print:** `POST /api/product/from-images` (até 10 imagens). A IA copia só o que está escrito, e o backend descarta preço anterior menor que o atual, comissão acima de 50% e nota fora de 0–5.
 - **Limites:** `AI_DAILY_LIMIT` (padrão 60 por dia) e 10 por minuto.
 - **Falta (você):** `ANTHROPIC_API_KEY` no `.env`. Modelo padrão: `claude-opus-5-5`, que pode ser trocado em `AI_MODEL`. Está ligado o fallback automático do servidor quando a IA recusa um pedido.
 

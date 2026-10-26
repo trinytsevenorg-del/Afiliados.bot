@@ -13,7 +13,9 @@ object Imagens {
 
     fun paraPrint(cr: ContentResolver, uri: Uri): ImagemPrint {
         val limites = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, limites) } ?: error("Não deu para abrir a imagem")
+        // Com inJustDecodeBounds o decode sempre devolve null: só lemos as medidas.
+        val entrada = cr.openInputStream(uri) ?: error("Não deu para abrir a imagem")
+        entrada.use { BitmapFactory.decodeStream(it, null, limites) }
         if (limites.outWidth <= 0 || limites.outHeight <= 0) error("Arquivo não é uma imagem")
         var amostra = 1
         while (maxOf(limites.outWidth, limites.outHeight) / (amostra * 2) >= LADO_MAX) amostra *= 2

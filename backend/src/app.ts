@@ -119,7 +119,7 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
   });
 
   // Prints são grandes: limite próprio só nesta rota.
-  app.post("/api/product/from-images", { bodyLimit: 16 * 1024 * 1024 }, async (req, reply) => {
+  app.post("/api/product/from-images", { bodyLimit: 40 * 1024 * 1024 }, async (req, reply) => {
     if (!ia(req.ip)) return reply.code(429).send({ erro: "limite", mensagem: "Muitos usos seguidos da IA. Espere um minuto." });
     return deps.ia.lerPrint(PedidoPrint.parse(req.body));
   });

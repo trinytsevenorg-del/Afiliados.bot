@@ -56,7 +56,7 @@ export const PedidoPrint = z.object({
       }),
     )
     .min(1)
-    .max(3),
+    .max(10),
 });
 export type PedidoPrint = z.infer<typeof PedidoPrint>;
 
@@ -66,7 +66,7 @@ export const DadosPrint = z.object({
   preco: z.number().nullable().describe("Preço atual à vista em reais, como número (ex.: 59.9). Null se não estiver visível"),
   precoAnterior: z.number().nullable().describe("Preço riscado/anterior em reais, só se aparecer riscado na tela"),
   comissaoPercentual: z.number().nullable().describe("Porcentagem de ganho/comissão do afiliado mostrada na tela (ex.: 'Ganhe 17%' → 17)"),
-  caracteristicas: z.array(z.string()).describe("Até 8 características escritas na tela (especificações, cor, tamanho). Nada deduzido"),
+  caracteristicas: z.array(z.string()).describe("Até 15 características escritas nas telas: especificações, cor, tamanho, medidas, material, selos como 'Mais vendido', '+10 mil vendidos', 'Frete grátis acima de R$ 19', 'Loja oficial X'. Nada deduzido"),
   descricao: z.string().nullable().describe("Trecho da descrição visível, se houver"),
   avaliacao: z.number().nullable().describe("Nota média visível (ex.: 4.8), se houver"),
   urgencia: z.string().nullable().describe("Prazo de oferta escrito na tela (ex.: 'termina em 2h'), se houver"),
@@ -82,7 +82,9 @@ Regras que não podem ser quebradas:
 - Preço anterior: só o valor que aparece riscado.
 - Comissão: só a porcentagem de ganho do afiliado mostrada na tela (barra de afiliados, "Ganhe X%", "Ganhos X%").
 - Valores em reais viram número com ponto decimal: "R$ 1.299,90" vira 1299.9.
-- Se houver várias imagens, elas são do mesmo produto.`;
+- As imagens são do MESMO produto (topo do anúncio, descrição, características, avaliações). Junte tudo sem repetir.
+- Características: copie as que estão escritas (cor, medidas, material, voltagem, selos, frete, loja oficial). Não liste meios de pagamento.
+- Se alguma imagem parecer de outro produto, ignore-a e avise.`;
 
 export interface UsoIa {
   data: string;
@@ -243,7 +245,7 @@ export function limparPrint(d: DadosPrint): DadosPrint {
     precoAnterior,
     comissaoPercentual: comissao,
     avaliacao,
-    caracteristicas: d.caracteristicas.map((c) => c.trim()).filter(Boolean).slice(0, 8).map((c) => c.slice(0, 200)),
+    caracteristicas: d.caracteristicas.map((c) => c.trim()).filter(Boolean).slice(0, 15).map((c) => c.slice(0, 200)),
     descricao: d.descricao?.slice(0, 2000) ?? null,
     avisos: [...new Set(avisos)],
   };

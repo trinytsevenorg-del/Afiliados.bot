@@ -122,7 +122,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
         erro = null
         lendoPrint = true
         try {
-            val imagens = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { uris.take(3).map { bot.afiliados.data.Imagens.paraPrint(cr, it) } }
+            val imagens = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { uris.take(10).map { bot.afiliados.data.Imagens.paraPrint(cr, it) } }
             val d = repo.backend.lerPrint(imagens).dados
             d.nome?.let { nome = it }
             d.preco?.let { preco = Precos.formatar(it).removePrefix("R$ "); precoDoPrint = it }
@@ -131,6 +131,10 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
             if (d.caracteristicas.isNotEmpty()) {
                 val atuais = caracteristicas.lines().map(String::trim).filter(String::isNotEmpty)
                 caracteristicas = (atuais + d.caracteristicas.filter { it !in atuais }).joinToString("\n")
+            }
+            d.avaliacao?.let { n ->
+                val nota = "Nota ${n.toString().replace('.', ',')} de 5"
+                if (!caracteristicas.contains(nota)) caracteristicas = (caracteristicas.lines().filter(String::isNotBlank) + nota).joinToString("\n")
             }
             d.descricao?.takeIf { descricao.isBlank() }?.let { descricao = it }
             if (marketplace == Marketplace.OUTRO) marketplace = when (d.marketplace) {
@@ -244,7 +248,7 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
         else if (linkInicial != null && vm.link.isBlank()) { vm.link = linkInicial; vm.analisar() }
     }
     val novo = produtoId == null
-    val escolherPrints = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(3)) { uris ->
+    val escolherPrints = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { uris ->
         vm.lerPrints(ctx.contentResolver, uris)
     }
     // Print enviado pelo "Compartilhar" de outro app.
@@ -277,7 +281,7 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
                     ) { Text(if (vm.lendoPrint) "Lendo o print…" else "📷 Preencher pelo print") }
                     if (vm.lendoPrint) CircularProgressIndicator()
                 }
-                Text("Tire print do anúncio (com a barra de ganhos de afiliado) e escolha até 3 imagens. A IA lê nome, preço, preço riscado, % de ganho e características.",
+                Text("Mande até 10 prints do mesmo produto: topo do anúncio (com GANHOS %), preço, descrição e características. A IA junta tudo e preenche.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (!vm.analisado) vm.erro?.let { Aviso(it, erro = true) }
             }

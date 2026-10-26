@@ -35,6 +35,10 @@ describe("acesso", () => {
     const grande = { imagens: [{ tipo: "image/jpeg", base64: "A".repeat(3_000_000) }] };
     const r = await a.inject({ method: "POST", url: "/api/product/from-images", headers: auth, payload: grande });
     expect(r.statusCode).toBe(503); // passou do limite de tamanho; só falta a chave da IA
+    const dez = { imagens: Array.from({ length: 10 }, () => ({ tipo: "image/jpeg", base64: "A".repeat(700_000) })) };
+    expect((await a.inject({ method: "POST", url: "/api/product/from-images", headers: auth, payload: dez })).statusCode).toBe(503);
+    const onze = { imagens: Array.from({ length: 11 }, () => ({ tipo: "image/jpeg", base64: "A".repeat(200) })) };
+    expect((await a.inject({ method: "POST", url: "/api/product/from-images", headers: auth, payload: onze })).statusCode).toBe(400);
     const ruim = await a.inject({ method: "POST", url: "/api/product/from-images", headers: auth, payload: { imagens: [{ tipo: "application/pdf", base64: "A".repeat(200) }] } });
     expect(ruim.statusCode).toBe(400);
   });

@@ -53,7 +53,7 @@ O app só aceita backend em **HTTPS**. Opções:
 
 ```bash
 cd android
-./gradlew :app:testDebugUnitTest   # 36 testes
+./gradlew :app:testDebugUnitTest   # 38 testes
 ./gradlew :app:assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
 ```
 

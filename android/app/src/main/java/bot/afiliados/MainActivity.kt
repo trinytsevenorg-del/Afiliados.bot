@@ -61,7 +61,7 @@ class MainActivity : FragmentActivity() {
         if ((i.action == Intent.ACTION_SEND || i.action == Intent.ACTION_SEND_MULTIPLE) && tipo.startsWith("image/")) {
             val uris = if (i.action == Intent.ACTION_SEND_MULTIPLE) i.extras?.let { androidx.core.content.IntentCompat.getParcelableArrayListExtra(i, Intent.EXTRA_STREAM, android.net.Uri::class.java) }.orEmpty()
             else listOfNotNull(androidx.core.content.IntentCompat.getParcelableExtra(i, Intent.EXTRA_STREAM, android.net.Uri::class.java))
-            if (uris.isNotEmpty()) { (application as AfiliadosApp).printPendente.value = uris.take(3); printRecebido.value = true }
+            if (uris.isNotEmpty()) { (application as AfiliadosApp).printPendente.value = uris.take(10); printRecebido.value = true }
         }
         if (i.action == Intent.ACTION_SEND && i.type == "text/plain") {
             linkRecebido.value = i.getStringExtra(Intent.EXTRA_TEXT)?.let { Links.extrairDeTexto(it) }

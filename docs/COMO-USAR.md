@@ -23,7 +23,7 @@
 ### Jeito mais rápido: pelo print (precisa da IA ligada)
 
 1. No app da loja, abra o produto e tire **print** da tela. A barra de afiliado com o seu **% de ganho** e o **preço** precisam aparecer. Se as características estiverem mais embaixo, tire um segundo print.
-2. Na galeria, toque em **Compartilhar → Afiliados.bot**. Ou, no app: **Novo produto → 📷 Preencher pelo print** e escolha até 3 imagens.
+2. Na galeria, toque em **Compartilhar → Afiliados.bot**. Ou, no app: **Novo produto → 📷 Preencher pelo print** e escolha até 10 imagens.
 3. A IA preenche nome, preço, preço riscado, % de ganho e características. **Só o que está escrito no print.** O que não aparece fica vazio.
 4. Cole o **link de afiliado**, escolha o **nicho**, confira e salve.
 5. Se você não mexer no preço lido, ele já fica como **"Confirmado por você"**. Assim não precisa confirmar de novo para publicar.
