@@ -1,0 +1,32 @@
+{
+  "name": "afiliados-bot-backend",
+  "version": "0.1.0",
+  "description": "Backend privado do Afiliados.bot: IA, Shopee, Mercado Livre e Telegram",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
+    "dotenv": "^18.0.9",
+    "fastify": "^5.12.7",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  }
+}

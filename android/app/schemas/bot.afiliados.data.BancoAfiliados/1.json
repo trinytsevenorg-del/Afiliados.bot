@@ -1,0 +1,909 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "58218d7e06cfd4352660851559c9eb9a",
+    "entities": [
+      {
+        "tableName": "nichos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nome` TEXT NOT NULL, `descricao` TEXT NOT NULL, `icone` TEXT NOT NULL, `preferenciasTexto` TEXT NOT NULL, `canalId` INTEGER, `ordem` INTEGER NOT NULL, `criadoEm` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nome",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descricao",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "icone",
+            "columnName": "icone",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "preferenciasTexto",
+            "columnName": "preferenciasTexto",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canalId",
+            "columnName": "canalId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "ordem",
+            "columnName": "ordem",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_nichos_nome",
+            "unique": true,
+            "columnNames": [
+              "nome"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_nichos_nome` ON `${TABLE_NAME}` (`nome`)"
+          }
+        ]
+      },
+      {
+        "tableName": "produtos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nome` TEXT NOT NULL, `linkOriginal` TEXT NOT NULL, `chave` TEXT NOT NULL, `linkAfiliado` TEXT, `linkAfiliadoOrigem` TEXT, `marketplace` TEXT NOT NULL, `idExterno` TEXT, `nichoId` INTEGER, `preco` REAL, `precoAnterior` REAL, `precoAnteriorComprovado` INTEGER NOT NULL, `comissaoPercentual` REAL, `comissaoOrigem` TEXT, `imagemUrl` TEXT, `descricaoOriginal` TEXT NOT NULL, `caracteristicas` TEXT NOT NULL, `observacoes` TEXT NOT NULL, `situacaoLink` TEXT NOT NULL, `situacaoPreco` TEXT NOT NULL, `ultimaVerificacao` INTEGER, `fontePreco` TEXT, `urgenciaFato` TEXT, `arquivado` INTEGER NOT NULL, `criadoEm` INTEGER NOT NULL, `atualizadoEm` INTEGER NOT NULL, FOREIGN KEY(`nichoId`) REFERENCES `nichos`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nome",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "linkOriginal",
+            "columnName": "linkOriginal",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chave",
+            "columnName": "chave",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "linkAfiliado",
+            "columnName": "linkAfiliado",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "linkAfiliadoOrigem",
+            "columnName": "linkAfiliadoOrigem",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "marketplace",
+            "columnName": "marketplace",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idExterno",
+            "columnName": "idExterno",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nichoId",
+            "columnName": "nichoId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "preco",
+            "columnName": "preco",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "precoAnterior",
+            "columnName": "precoAnterior",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "precoAnteriorComprovado",
+            "columnName": "precoAnteriorComprovado",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "comissaoPercentual",
+            "columnName": "comissaoPercentual",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "comissaoOrigem",
+            "columnName": "comissaoOrigem",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "imagemUrl",
+            "columnName": "imagemUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "descricaoOriginal",
+            "columnName": "descricaoOriginal",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "caracteristicas",
+            "columnName": "caracteristicas",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "observacoes",
+            "columnName": "observacoes",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "situacaoLink",
+            "columnName": "situacaoLink",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "situacaoPreco",
+            "columnName": "situacaoPreco",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimaVerificacao",
+            "columnName": "ultimaVerificacao",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "fontePreco",
+            "columnName": "fontePreco",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "urgenciaFato",
+            "columnName": "urgenciaFato",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "arquivado",
+            "columnName": "arquivado",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atualizadoEm",
+            "columnName": "atualizadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_produtos_chave",
+            "unique": true,
+            "columnNames": [
+              "chave"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_produtos_chave` ON `${TABLE_NAME}` (`chave`)"
+          },
+          {
+            "name": "index_produtos_nichoId",
+            "unique": false,
+            "columnNames": [
+              "nichoId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_produtos_nichoId` ON `${TABLE_NAME}` (`nichoId`)"
+          },
+          {
+            "name": "index_produtos_arquivado",
+            "unique": false,
+            "columnNames": [
+              "arquivado"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_produtos_arquivado` ON `${TABLE_NAME}` (`arquivado`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "nichos",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "nichoId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "verificacoes_preco",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `produtoId` INTEGER NOT NULL, `preco` REAL, `precoAnterior` REAL, `fonte` TEXT NOT NULL, `resultado` TEXT NOT NULL, `detalhe` TEXT NOT NULL, `diferenca` REAL, `consultadoEm` INTEGER NOT NULL, FOREIGN KEY(`produtoId`) REFERENCES `produtos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "produtoId",
+            "columnName": "produtoId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "preco",
+            "columnName": "preco",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "precoAnterior",
+            "columnName": "precoAnterior",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "fonte",
+            "columnName": "fonte",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resultado",
+            "columnName": "resultado",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detalhe",
+            "columnName": "detalhe",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "diferenca",
+            "columnName": "diferenca",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "consultadoEm",
+            "columnName": "consultadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_verificacoes_preco_produtoId",
+            "unique": false,
+            "columnNames": [
+              "produtoId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_verificacoes_preco_produtoId` ON `${TABLE_NAME}` (`produtoId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "produtos",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "produtoId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "textos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `produtoId` INTEGER NOT NULL, `titulo` TEXT NOT NULL, `whatsapp` TEXT NOT NULL, `canal` TEXT NOT NULL, `descricao` TEXT NOT NULL, `cta` TEXT NOT NULL, `objetiva` TEXT NOT NULL, `chamativa` TEXT NOT NULL, `hashtags` TEXT NOT NULL, `urgencia` TEXT, `origem` TEXT NOT NULL, `modelo` TEXT, `avisos` TEXT NOT NULL, `editado` INTEGER NOT NULL, `criadoEm` INTEGER NOT NULL, FOREIGN KEY(`produtoId`) REFERENCES `produtos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "produtoId",
+            "columnName": "produtoId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titulo",
+            "columnName": "titulo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "whatsapp",
+            "columnName": "whatsapp",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canal",
+            "columnName": "canal",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descricao",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cta",
+            "columnName": "cta",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "objetiva",
+            "columnName": "objetiva",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chamativa",
+            "columnName": "chamativa",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hashtags",
+            "columnName": "hashtags",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "urgencia",
+            "columnName": "urgencia",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "origem",
+            "columnName": "origem",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "modelo",
+            "columnName": "modelo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "avisos",
+            "columnName": "avisos",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "editado",
+            "columnName": "editado",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_textos_produtoId",
+            "unique": false,
+            "columnNames": [
+              "produtoId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_textos_produtoId` ON `${TABLE_NAME}` (`produtoId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "produtos",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "produtoId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "canais",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nome` TEXT NOT NULL, `tipo` TEXT NOT NULL, `destino` TEXT NOT NULL, `ativo` INTEGER NOT NULL, `ultimoTeste` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nome",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "destino",
+            "columnName": "destino",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ativo",
+            "columnName": "ativo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimoTeste",
+            "columnName": "ultimoTeste",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "fila",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `produtoId` INTEGER NOT NULL, `canalId` INTEGER, `texto` TEXT NOT NULL, `link` TEXT NOT NULL, `hashtags` TEXT NOT NULL, `estado` TEXT NOT NULL, `planejadoPara` INTEGER, `chave` TEXT NOT NULL, `ordem` INTEGER NOT NULL, `ultimoResultado` TEXT, `idMensagemExterna` TEXT, `criadoEm` INTEGER NOT NULL, `atualizadoEm` INTEGER NOT NULL, FOREIGN KEY(`produtoId`) REFERENCES `produtos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`canalId`) REFERENCES `canais`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "produtoId",
+            "columnName": "produtoId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canalId",
+            "columnName": "canalId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "texto",
+            "columnName": "texto",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "link",
+            "columnName": "link",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hashtags",
+            "columnName": "hashtags",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estado",
+            "columnName": "estado",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "planejadoPara",
+            "columnName": "planejadoPara",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "chave",
+            "columnName": "chave",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordem",
+            "columnName": "ordem",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimoResultado",
+            "columnName": "ultimoResultado",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "idMensagemExterna",
+            "columnName": "idMensagemExterna",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atualizadoEm",
+            "columnName": "atualizadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_fila_produtoId",
+            "unique": false,
+            "columnNames": [
+              "produtoId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_fila_produtoId` ON `${TABLE_NAME}` (`produtoId`)"
+          },
+          {
+            "name": "index_fila_canalId",
+            "unique": false,
+            "columnNames": [
+              "canalId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_fila_canalId` ON `${TABLE_NAME}` (`canalId`)"
+          },
+          {
+            "name": "index_fila_estado",
+            "unique": false,
+            "columnNames": [
+              "estado"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_fila_estado` ON `${TABLE_NAME}` (`estado`)"
+          },
+          {
+            "name": "index_fila_chave",
+            "unique": true,
+            "columnNames": [
+              "chave"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_fila_chave` ON `${TABLE_NAME}` (`chave`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "produtos",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "produtoId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "canais",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "canalId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "tentativas",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `itemId` INTEGER NOT NULL, `inicio` INTEGER NOT NULL, `fim` INTEGER, `resultado` TEXT, `detalhe` TEXT NOT NULL, FOREIGN KEY(`itemId`) REFERENCES `fila`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inicio",
+            "columnName": "inicio",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fim",
+            "columnName": "fim",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "resultado",
+            "columnName": "resultado",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "detalhe",
+            "columnName": "detalhe",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_tentativas_itemId",
+            "unique": false,
+            "columnNames": [
+              "itemId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tentativas_itemId` ON `${TABLE_NAME}` (`itemId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "fila",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "itemId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "comissoes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `produtoId` INTEGER, `marketplace` TEXT NOT NULL, `valor` REAL NOT NULL, `percentual` REAL, `dataVenda` INTEGER, `status` TEXT NOT NULL, `origem` TEXT NOT NULL, `observacao` TEXT NOT NULL, `criadoEm` INTEGER NOT NULL, FOREIGN KEY(`produtoId`) REFERENCES `produtos`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "produtoId",
+            "columnName": "produtoId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "marketplace",
+            "columnName": "marketplace",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "valor",
+            "columnName": "valor",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "percentual",
+            "columnName": "percentual",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "dataVenda",
+            "columnName": "dataVenda",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "origem",
+            "columnName": "origem",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "observacao",
+            "columnName": "observacao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_comissoes_produtoId",
+            "unique": false,
+            "columnNames": [
+              "produtoId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_comissoes_produtoId` ON `${TABLE_NAME}` (`produtoId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "produtos",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "produtoId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "atividades",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `quando` INTEGER NOT NULL, `tipo` TEXT NOT NULL, `texto` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quando",
+            "columnName": "quando",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "texto",
+            "columnName": "texto",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_atividades_quando",
+            "unique": false,
+            "columnNames": [
+              "quando"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_atividades_quando` ON `${TABLE_NAME}` (`quando`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '58218d7e06cfd4352660851559c9eb9a')"
+    ]
+  }
+}
