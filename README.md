@@ -31,7 +31,7 @@ Projeto separado da BattleHub. Não compartilha código, banco nem contas.
 | Backup JSON (exportar/importar sem duplicar) | Funciona |
 | Bloqueio por digital/senha do aparelho | Opcional, em Ajustes |
 
-Passo a passo de uso: [`docs/COMO-USAR.md`](docs/COMO-USAR.md). O que depende de credencial ou aprovação: [`docs/INTEGRACOES.md`](docs/INTEGRACOES.md).
+**Começando do zero:** [`docs/PRIMEIROS-PASSOS.md`](docs/PRIMEIROS-PASSOS.md). Passo a passo de uso: [`docs/COMO-USAR.md`](docs/COMO-USAR.md). O que depende de credencial ou aprovação: [`docs/INTEGRACOES.md`](docs/INTEGRACOES.md).
 
 ## Rodar o backend
 
@@ -44,7 +44,8 @@ npm run build && npm start
 ```
 
 O app só aceita backend em **HTTPS**. Opções:
-- Render, Railway ou Fly.io com o `Dockerfile` (monte um volume em `/data`).
+- Render: já tem `render.yaml` (New → Blueprint). Guia: `docs/PRIMEIROS-PASSOS.md`.
+- Railway ou Fly.io com o `Dockerfile` (monte um volume em `/data`).
 - Seu computador + Cloudflare Tunnel (`cloudflared tunnel --url http://localhost:8787`) para testes.
 
 ## Gerar o APK
