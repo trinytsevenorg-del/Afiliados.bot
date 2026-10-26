@@ -127,13 +127,16 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
     return deps.ia.lerPrint(PedidoPrint.parse(req.body));
   });
 
-  app.post("/api/publish/telegram", async (req) => {
+  app.post("/api/publish/telegram", { bodyLimit: 12 * 1024 * 1024 }, async (req) => {
     const b = z
       .object({
         chave: z.string().min(8).max(100),
         chatId: z.string().regex(/^(@[A-Za-z0-9_]{5,32}|-?\d{5,20})$/, "Use @canal ou o ID numérico"),
         texto: z.string().min(1).max(4096),
         imagem: z.string().max(2048).nullish(),
+        foto: z
+          .object({ tipo: z.enum(["image/jpeg", "image/png", "image/webp"]), base64: z.string().min(100).max(10_000_000).regex(/^[A-Za-z0-9+/=]+$/) })
+          .nullish(),
       })
       .parse(req.body);
     if (b.imagem && !b.imagem.startsWith("https://")) throw new LinkInvalido("A imagem precisa ser HTTPS");

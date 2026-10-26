@@ -40,7 +40,7 @@ Projeto separado da BattleHub. Não compartilha código, banco nem contas.
 cd backend
 cp .env.example .env      # preencha APP_TOKEN e as chaves que tiver
 npm ci
-npm test                  # 39 testes
+npm test                  # 41 testes
 npm run build && npm start
 ```
 
@@ -53,7 +53,7 @@ O app só aceita backend em **HTTPS**. Opções:
 
 ```bash
 cd android
-./gradlew :app:testDebugUnitTest   # 38 testes
+./gradlew :app:testDebugUnitTest   # 40 testes
 ./gradlew :app:assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
 ```
 

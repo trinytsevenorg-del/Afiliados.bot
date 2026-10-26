@@ -51,6 +51,8 @@ data class Produto(
     /** "manual" ou "shopee_api". */
     val comissaoOrigem: String? = null,
     val imagemUrl: String? = null,
+    /** Foto do produto guardada no aparelho (recortada do print ou escolhida da galeria). */
+    val fotoLocal: String? = null,
     val descricaoOriginal: String = "",
     /** Fatos do produto, um por linha. A IA só usa isso. */
     val caracteristicas: String = "",

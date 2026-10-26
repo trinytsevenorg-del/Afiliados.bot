@@ -88,7 +88,7 @@ describe("leitura de print", () => {
   const img = { tipo: "image/jpeg" as const, base64: "A".repeat(200) };
   const dados = {
     marketplace: "mercadolivre", nome: " Fone Bluetooth ", preco: 59.9, precoAnterior: 99.9, comissaoPercentual: 17,
-    caracteristicas: ["Bluetooth 5.3", ""], descricao: null, avaliacao: 4.8, urgencia: null, avisos: [],
+    caracteristicas: ["Bluetooth 5.3", ""], descricao: null, avaliacao: 4.8, urgencia: null, foto: null, avisos: [],
   };
   function cliente(saida: Record<string, unknown>) {
     const pedidos: any[] = [];
@@ -109,6 +109,16 @@ describe("leitura de print", () => {
     expect(d.comissaoPercentual).toBeNull();
     expect(d.avaliacao).toBeNull();
     expect(d.avisos.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("foto: aceita retângulo válido e descarta o impossível", () => {
+    const ok = limparPrint({ ...dados, foto: { imagem: 0, caixa: [40, 0, 460, 1000] } } as never, 1);
+    expect(ok.foto).toEqual({ imagem: 0, caixa: [40, 0, 460, 1000] });
+    const foraDaLista = limparPrint({ ...dados, foto: { imagem: 2, caixa: [40, 0, 460, 1000] } } as never, 1);
+    expect(foraDaLista.foto).toBeNull();
+    const pequena = limparPrint({ ...dados, foto: { imagem: 0, caixa: [10, 10, 30, 30] } } as never, 1);
+    expect(pequena.foto).toBeNull();
+    expect(pequena.avisos.join()).toMatch(/foto/);
   });
 
   it("sem chave da IA avisa", async () => {

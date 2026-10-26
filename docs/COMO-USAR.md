@@ -25,8 +25,10 @@
 1. No app da loja, abra o produto e tire **print** da tela. A barra de afiliado com o seu **% de ganho** e o **preço** precisam aparecer. Se as características estiverem mais embaixo, tire um segundo print.
 2. Na galeria, toque em **Compartilhar → Afiliados.bot**. Ou, no app: **Novo produto → 📷 Preencher pelo print** e escolha até 10 imagens.
 3. A IA preenche nome, preço, preço riscado, % de ganho e características. **Só o que está escrito no print.** O que não aparece fica vazio.
-4. Cole o **link de afiliado**, escolha o **nicho**, confira e salve.
-5. Se você não mexer no preço lido, ele já fica como **"Confirmado por você"**. Assim não precisa confirmar de novo para publicar.
+4. **Link de afiliado:** no app da loja, toque em **GANHOS** → copiar link. No Afiliados.bot, toque em **📋 Colar link copiado**.
+5. **Foto:** a IA acha a foto do produto no print e o app recorta sozinho. Se não gostar, toque em **Trocar foto** e escolha outra da galeria.
+6. Escolha o **nicho**, confira e salve.
+7. Se você não mexer no preço lido, ele já fica como **"Confirmado por você"**. Assim não precisa confirmar de novo para publicar.
 
 A comissão estimada sai sozinha: preço × % de ganho (ex.: R$ 100 × 17% = R$ 17). Ela é **estimativa**. O valor real só vale quando a loja confirmar.
 
@@ -60,7 +62,7 @@ Na **Fila**, toque no item para revisar.
    - "Confirmar à mão": você abre a loja, vê o preço e digita.
 2. Depois:
    - **Telegram:** "Publicar agora" ou "Agendar". Só fica "Publicado com confirmação" quando o Telegram confirma.
-   - **WhatsApp:** "Abrir no WhatsApp" → escolha o grupo → envie → volte e responda **"Sim, enviei"**.
+   - **WhatsApp:** "Abrir no WhatsApp" → escolha o grupo → a **foto vai junto com o texto** → envie → volte e responda **"Sim, enviei"**.
    - **Agendado no WhatsApp:** na hora chega uma notificação "Hora de publicar". Toque e envie.
 3. Se aparecer **"Envio não confirmado"**, olhe o canal. Se a mensagem está lá, toque em "Apareceu no canal". Se não está, toque em "Tentar de novo" (não duplica).
 

@@ -4,6 +4,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -70,6 +72,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
     var comissao by mutableStateOf("")
     var comissaoOrigem by mutableStateOf<String?>(null)
     var imagem by mutableStateOf("")
+    var fotoLocal by mutableStateOf<String?>(null)
     var descricao by mutableStateOf("")
     var caracteristicas by mutableStateOf("")
     var observacoes by mutableStateOf("")
@@ -89,7 +92,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
         precoAnterior = p.precoAnterior?.let { Precos.formatar(it).removePrefix("R$ ") }.orEmpty()
         anteriorComprovado = p.precoAnteriorComprovado
         comissao = p.comissaoPercentual?.toString().orEmpty(); comissaoOrigem = p.comissaoOrigem
-        imagem = p.imagemUrl.orEmpty(); descricao = p.descricaoOriginal; caracteristicas = p.caracteristicas; observacoes = p.observacoes
+        imagem = p.imagemUrl.orEmpty(); fotoLocal = p.fotoLocal; descricao = p.descricaoOriginal; caracteristicas = p.caracteristicas; observacoes = p.observacoes
     }
 
     fun analisar() = viewModelScope.launch {
@@ -117,7 +120,8 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
         }
     }
 
-    fun lerPrints(cr: android.content.ContentResolver, uris: List<android.net.Uri>) = viewModelScope.launch {
+    fun lerPrints(ctx: android.content.Context, uris: List<android.net.Uri>) = viewModelScope.launch {
+        val cr = ctx.contentResolver
         if (uris.isEmpty()) return@launch
         erro = null
         lendoPrint = true
@@ -125,6 +129,13 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
             val imagens = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { uris.take(10).map { bot.afiliados.data.Imagens.paraPrint(cr, it) } }
             val d = repo.backend.lerPrint(imagens).dados
             d.nome?.let { nome = it }
+            // Recorta a foto do produto do próprio print (a IA só diz onde ela está).
+            d.foto?.let { f ->
+                uris.getOrNull(f.imagem)?.let { u ->
+                    runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { bot.afiliados.data.Fotos.recortar(ctx, u, f.caixa) } }
+                        .onSuccess { fotoLocal = it }
+                }
+            }
             d.preco?.let { preco = Precos.formatar(it).removePrefix("R$ "); precoDoPrint = it }
             d.precoAnterior?.let { precoAnterior = Precos.formatar(it).removePrefix("R$ "); anteriorComprovado = true }
             d.comissaoPercentual?.let { comissao = it.toString(); comissaoOrigem = "print" }
@@ -169,7 +180,8 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
     fun validar(): String? {
         if (link.isBlank() && linkAfiliado.isNotBlank()) link = linkAfiliado.trim()
         if (nome.isBlank()) return "Informe o nome"
-        if (Links.validar(link, exigirConhecido = false) !is Links.Resultado.Ok) return "Link original inválido (precisa ser HTTPS)"
+        if (link.isBlank()) return "Cole o link de afiliado (toque em GANHOS no app da loja e copie)"
+        if (Links.validar(link, exigirConhecido = false) !is Links.Resultado.Ok) return "Link inválido (precisa ser HTTPS)"
         if (linkAfiliado.isNotBlank() && Links.validar(linkAfiliado, exigirConhecido = false) !is Links.Resultado.Ok) return "Link de afiliado inválido (precisa ser HTTPS)"
         if (preco.isNotBlank() && Precos.ler(preco) == null) return "Preço inválido"
         if (precoAnterior.isNotBlank() && Precos.ler(precoAnterior) == null) return "Preço anterior inválido"
@@ -204,6 +216,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
             comissaoPercentual = Precos.ler(comissao),
             comissaoOrigem = if (comissao.isBlank()) null else comissaoOrigem ?: "manual",
             imagemUrl = imagem.trim().ifBlank { null },
+            fotoLocal = fotoLocal,
             descricaoOriginal = descricao.trim(),
             caracteristicas = caracteristicas.trim(),
             observacoes = observacoes.trim(),
@@ -242,6 +255,7 @@ class FormProdutoVM(private val repo: Repositorio) : ViewModel() {
 fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?, linkInicial: String?) {
     val vm: FormProdutoVM = viewModel { FormProdutoVM(app.repo) }
     val ctx = LocalContext.current
+    val escopoTela = androidx.compose.runtime.rememberCoroutineScope()
     val nichos by app.repo.dao.nichos().collectAsStateWithLifecycle(emptyList())
     LaunchedEffect(produtoId, linkInicial) {
         if (produtoId != null && vm.original == null) vm.carregar(produtoId)
@@ -249,12 +263,18 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
     }
     val novo = produtoId == null
     val escolherPrints = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { uris ->
-        vm.lerPrints(ctx.contentResolver, uris)
+        vm.lerPrints(ctx, uris)
+    }
+    val escolherFoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) escopoTela.launch {
+            runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { bot.afiliados.data.Fotos.daGaleria(ctx, uri) } }
+                .onSuccess { vm.fotoLocal = it }.onFailure { ctx.avisar(it.message ?: "Não deu para usar essa imagem") }
+        }
     }
     // Print enviado pelo "Compartilhar" de outro app.
     val pendente = app.printPendente.value
     LaunchedEffect(pendente) {
-        if (pendente.isNotEmpty()) { app.printPendente.value = emptyList(); vm.lerPrints(ctx.contentResolver, pendente) }
+        if (pendente.isNotEmpty()) { app.printPendente.value = emptyList(); vm.lerPrints(ctx, pendente) }
     }
 
     Scaffold(topBar = {
@@ -298,7 +318,13 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
                 item { Escolha("Nicho", listOf(null) + nichos, nichos.firstOrNull { it.id == vm.nichoId }, { n -> n?.let { "${it.icone} ${it.nome}" } ?: "Sem nicho" }, { vm.nichoId = it?.id }) }
                 item {
                     val origem = when (vm.linkAfiliadoOrigem) { "shopee_api" -> "Gerado pela API oficial da Shopee"; "manual" -> "Informado por você"; "importado" -> "Importado de backup"; else -> null }
-                    Campo(vm.linkAfiliado, { vm.linkAfiliado = it; vm.linkAfiliadoOrigem = "manual" }, "Link de afiliado", ajuda = origem ?: "Cole o link do painel de afiliados. O app nunca inventa este link.")
+                    Campo(vm.linkAfiliado, { vm.linkAfiliado = it; vm.linkAfiliadoOrigem = "manual" }, "Link de afiliado", ajuda = origem ?: "No app da loja, toque em GANHOS → copiar link. Depois toque em Colar.")
+                    OutlinedButton(onClick = {
+                        val texto = ctx.getSystemService(android.content.ClipboardManager::class.java).primaryClip?.getItemAt(0)?.coerceToText(ctx)?.toString().orEmpty()
+                        val achado = Links.extrairDeTexto(texto)
+                        if (achado == null) ctx.avisar("Não achei um link copiado. Copie o link de afiliado e tente de novo.")
+                        else { vm.linkAfiliado = achado; vm.linkAfiliadoOrigem = "manual" }
+                    }) { Text("📋 Colar link copiado") }
                 }
                 if (vm.marketplace == Marketplace.SHOPEE) item {
                     OutlinedButton(onClick = { vm.gerarLinkShopee { ctx.avisar(it) } }, enabled = !vm.gerandoLink) { Text(if (vm.gerandoLink) "Gerando…" else "Gerar link pela API da Shopee") }
@@ -327,7 +353,17 @@ fun ProdutoFormTela(app: AfiliadosApp, nav: NavHostController, produtoId: Long?,
                         Text("Comissão estimada por venda: ${Precos.formatar(it)} (estimativa)", style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                item { Campo(vm.imagem, { vm.imagem = it }, "Imagem (link HTTPS)", ajuda = "Use só imagem da fonte oficial ou sua") }
+                item {
+                    Secao("Foto do produto") {
+                        val foto = vm.fotoLocal?.let { java.io.File(it) }?.takeIf { it.isFile }
+                        if (foto != null) coil.compose.AsyncImage(foto, null, Modifier.fillMaxWidth().heightIn(max = 280.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+                        else Text("Sem foto. Ela é recortada do print sozinha, ou escolha uma da galeria.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { escolherFoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) { Text(if (foto != null) "Trocar foto" else "Escolher foto") }
+                            if (foto != null) TextButton(onClick = { vm.fotoLocal = null }) { Text("Remover") }
+                        }
+                    }
+                }
                 item { Campo(vm.caracteristicas, { vm.caracteristicas = it }, "Características comprovadas (uma por linha)", linhas = 3, ajuda = "A IA só usa o que estiver aqui e na descrição") }
                 item { Campo(vm.descricao, { vm.descricao = it }, "Descrição original", linhas = 3) }
                 item { Campo(vm.observacoes, { vm.observacoes = it }, "Observações pessoais", linhas = 2) }

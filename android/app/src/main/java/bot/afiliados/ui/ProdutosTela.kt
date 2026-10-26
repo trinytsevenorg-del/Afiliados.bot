@@ -121,9 +121,10 @@ fun ProdutosTela(app: AfiliadosApp, nav: NavHostController) {
 }
 
 @Composable
-private fun Imagem(url: String?, modifier: Modifier) {
-    if (url != null && url.startsWith("https://")) {
-        AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier.clip(RoundedCornerShape(8.dp)))
+private fun Imagem(p: Produto, modifier: Modifier) {
+    val modelo: Any? = p.fotoLocal?.let { java.io.File(it) }?.takeIf { it.isFile } ?: p.imagemUrl?.takeIf { it.startsWith("https://") }
+    if (modelo != null) {
+        AsyncImage(model = modelo, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier.clip(RoundedCornerShape(8.dp)))
     } else {
         Cartao(modifier) { Text("Sem imagem", Modifier.padding(8.dp), style = MaterialTheme.typography.labelSmall) }
     }
@@ -142,7 +143,7 @@ private fun Selos(app: AfiliadosApp, p: Produto) {
 private fun CartaoLista(app: AfiliadosApp, p: Produto, nicho: String?, aoClicar: () -> Unit) {
     Cartao(Modifier.fillMaxWidth().clickable(onClick = aoClicar)) {
         Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Imagem(p.imagemUrl, Modifier.size(64.dp))
+            Imagem(p, Modifier.size(64.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(p.nome, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
                 Text("${p.marketplace.rotulo} · ${nicho ?: "Sem nicho"} · ${Precos.formatar(p.preco)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -156,7 +157,7 @@ private fun CartaoLista(app: AfiliadosApp, p: Produto, nicho: String?, aoClicar:
 private fun CartaoGrade(app: AfiliadosApp, p: Produto, nicho: String?, aoClicar: () -> Unit) {
     Cartao(Modifier.fillMaxWidth().clickable(onClick = aoClicar)) {
         Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Imagem(p.imagemUrl, Modifier.fillMaxWidth().aspectRatio(1f))
+            Imagem(p, Modifier.fillMaxWidth().aspectRatio(1f))
             Text(p.nome, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
             Text(Precos.formatar(p.preco), style = MaterialTheme.typography.bodyMedium)
             Text("${p.marketplace.rotulo} · ${nicho ?: "Sem nicho"}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

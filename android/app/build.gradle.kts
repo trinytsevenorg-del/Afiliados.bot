@@ -14,8 +14,8 @@ android {
         applicationId = "bot.afiliados"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.3.0"
     }
 
     buildTypes {
@@ -35,6 +35,8 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
+    // Esquemas do banco vão no APK de teste (debug) para o teste de migração ler.
+    sourceSets { getByName("debug").assets.srcDir("$projectDir/schemas") }
     testOptions {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
@@ -80,5 +82,6 @@ dependencies {
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.work.testing)
+    testImplementation(libs.room.testing)
     debugImplementation(libs.compose.ui.test.manifest)
 }

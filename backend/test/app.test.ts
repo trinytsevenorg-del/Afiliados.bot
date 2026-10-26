@@ -91,6 +91,19 @@ describe("Telegram", () => {
     expect(JSON.parse(String(chamadas[0]!.init.body)).text.endsWith("https://s.shopee.com.br/abc")).toBe(true);
   });
 
+  it("foto do aparelho vai como arquivo junto com a legenda", async () => {
+    const { f, chamadas } = fakeFetch(() => json({ ok: true, result: { message_id: 9, chat: { id: -1 } } }));
+    const tg = new Telegram({ token: "123:abc", dataDir: cfgTeste().DATA_DIR }, f);
+    const a = await app({}, tg);
+    const foto = { tipo: "image/jpeg", base64: Buffer.alloc(3000, 7).toString("base64") };
+    const r = await a.inject({ method: "POST", url: "/api/publish/telegram", headers: auth, payload: { chave: "fila-4-abcdef", chatId: "@meucanal", texto: "Oferta\n\nhttps://meli.la/x", foto } });
+    expect(r.statusCode).toBe(200);
+    expect(chamadas[0]!.url).toMatch(/sendPhoto$/);
+    const corpo = chamadas[0]!.init.body as FormData;
+    expect(corpo.get("caption")).toBe("Oferta\n\nhttps://meli.la/x");
+    expect((corpo.get("photo") as Blob).size).toBe(3000);
+  });
+
   it("falha do Telegram não vira 'publicado'", async () => {
     const { f } = fakeFetch(() => json({ ok: false, description: "Forbidden: bot is not a member" }, 403));
     const tg = new Telegram({ token: "123:abc", dataDir: cfgTeste().DATA_DIR }, f);

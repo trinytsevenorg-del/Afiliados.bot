@@ -46,13 +46,12 @@ export class Telegram {
     await writeFile(this.arquivo, JSON.stringify(lista));
   }
 
-  private async api<T>(metodo: string, corpo: Record<string, unknown>): Promise<T> {
+  private async api<T>(metodo: string, corpo: Record<string, unknown> | FormData): Promise<T> {
     if (!this.opts.token) throw new IntegracaoErro("nao_configurado", "Telegram não configurado (TELEGRAM_BOT_TOKEN)", 503);
     // Sem repetição automática no envio: uma repetição poderia duplicar a postagem.
     const res = await fetchRetry(`https://api.telegram.org/bot${this.opts.token}/${metodo}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(corpo),
+      ...(corpo instanceof FormData ? { body: corpo } : { headers: { "content-type": "application/json" }, body: JSON.stringify(corpo) }),
       timeoutMs: 15_000,
       retries: metodo.startsWith("get") ? 2 : 0,
       fetchImpl: this.fetchImpl,
@@ -70,17 +69,27 @@ export class Telegram {
    * Publica uma vez por chave. Se a mesma chave chegar de novo (reenvio após
    * queda de conexão), devolve a publicação anterior sem postar de novo.
    */
-  async publicar(p: { chave: string; chatId: string; texto: string; imagem?: string | null }) {
+  async publicar(p: { chave: string; chatId: string; texto: string; imagem?: string | null; foto?: { tipo: string; base64: string } | null }) {
     await this.carregar();
     const anterior = this.enviados.get(p.chave);
     if (anterior) return { ...anterior, repetido: true };
     type Msg = { message_id: number; chat: { id: number } };
     // Nunca cortar o texto: o link de afiliado fica no fim e se perderia.
     if (p.texto.length > 4096) throw new IntegracaoErro("resposta_invalida", "Texto maior que 4096 caracteres. Encurte antes de publicar.", 400);
-    const comFoto = p.imagem && p.texto.length <= 1024;
-    const msg = comFoto
-      ? await this.api<Msg>("sendPhoto", { chat_id: p.chatId, photo: p.imagem, caption: p.texto })
-      : await this.api<Msg>("sendMessage", { chat_id: p.chatId, text: p.texto, link_preview_options: { is_disabled: false } });
+    const cabe = p.texto.length <= 1024;
+    let msg: Msg;
+    if (p.foto && cabe) {
+      // Foto do aparelho: vai como arquivo (multipart).
+      const form = new FormData();
+      form.append("chat_id", p.chatId);
+      form.append("caption", p.texto);
+      form.append("photo", new Blob([Buffer.from(p.foto.base64, "base64")], { type: p.foto.tipo }), "produto.jpg");
+      msg = await this.api<Msg>("sendPhoto", form);
+    } else if (p.imagem && cabe) {
+      msg = await this.api<Msg>("sendPhoto", { chat_id: p.chatId, photo: p.imagem, caption: p.texto });
+    } else {
+      msg = await this.api<Msg>("sendMessage", { chat_id: p.chatId, text: p.texto, link_preview_options: { is_disabled: false } });
+    }
     const pub: Publicacao = { chave: p.chave, chatId: String(msg.chat.id), messageId: msg.message_id, publicadoEm: new Date().toISOString() };
     this.enviados.set(p.chave, pub);
     await this.salvar();

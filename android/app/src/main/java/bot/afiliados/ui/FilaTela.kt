@@ -207,7 +207,7 @@ fun ItemFilaTela(app: AfiliadosApp, nav: NavHostController, id: Long) {
                                 }
                             }) { Text("Publicar agora") }
                             else Button(enabled = bloqueios.isEmpty(), onClick = {
-                                ctx.compartilhar(mensagem, if (canal?.tipo == TipoCanal.WHATSAPP_COMPARTILHAR) "com.whatsapp" else null)
+                                ctx.compartilhar(mensagem, if (canal?.tipo == TipoCanal.WHATSAPP_COMPARTILHAR) "com.whatsapp" else null, produto?.fotoLocal?.let { java.io.File(it) })
                                 dialogo = "confirmar_envio"
                             }) { Text(if (canal?.tipo == TipoCanal.WHATSAPP_COMPARTILHAR) "Abrir no WhatsApp" else "Compartilhar") }
                             OutlinedButton(onClick = { dialogo = "agendar" }) { Text(if (item.estado == EstadoFila.AGENDADO) "Mudar horário" else "Agendar") }

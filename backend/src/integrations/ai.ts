@@ -71,6 +71,13 @@ export const DadosPrint = z.object({
   descricao: z.string().nullable().describe("Trecho da descrição visível, se houver"),
   avaliacao: z.number().nullable().describe("Nota média visível (ex.: 4.8), se houver"),
   urgencia: z.string().nullable().describe("Prazo de oferta escrito na tela (ex.: 'termina em 2h'), se houver"),
+  foto: z
+    .object({
+      imagem: z.number().int().describe("Índice (começando em 0) da imagem onde está a foto principal do produto"),
+      caixa: z.array(z.number()).describe("Retângulo da foto do produto: [ymin, xmin, ymax, xmax], de 0 a 1000"),
+    })
+    .nullable()
+    .describe("Onde está a FOTO do produto (sem textos, botões ou barras). Null se não houver foto clara"),
   avisos: z.array(z.string()).describe("O que ficou ilegível, cortado ou duvidoso"),
 });
 export type DadosPrint = z.infer<typeof DadosPrint>;
@@ -85,7 +92,8 @@ Regras que não podem ser quebradas:
 - Valores em reais viram número com ponto decimal: "R$ 1.299,90" vira 1299.9.
 - As imagens são do MESMO produto (topo do anúncio, descrição, características, avaliações). Junte tudo sem repetir.
 - Características: copie as que estão escritas (cor, medidas, material, voltagem, selos, frete, loja oficial). Não liste meios de pagamento.
-- Se alguma imagem parecer de outro produto, ignore-a e avise.`;
+- Se alguma imagem parecer de outro produto, ignore-a e avise.
+- Foto: marque o retângulo só da foto principal do produto, sem barra de status, botões, selos ou textos por cima.`;
 
 export interface UsoIa {
   data: string;
@@ -186,7 +194,7 @@ export class GeradorTexto {
         ...pedido.imagens.map((i) => ({ inlineData: { mimeType: i.tipo, data: i.base64 } })),
         { text: "Extraia os dados do produto destes prints." },
       ]);
-      return { dados: limparPrint(dados), lidoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
+      return { dados: limparPrint(dados, pedido.imagens.length), lidoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
     }
     let resp;
     try {
@@ -214,7 +222,7 @@ export class GeradorTexto {
     }
     if (resp.stop_reason === "refusal") throw new IntegracaoErro("indisponivel", "A IA recusou ler este print. Preencha à mão.", 422);
     if (!resp.parsed_output) throw new IntegracaoErro("resposta_invalida", "A IA não devolveu o formato esperado", 502);
-    return { dados: limparPrint(resp.parsed_output), lidoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
+    return { dados: limparPrint(resp.parsed_output, pedido.imagens.length), lidoEm: new Date().toISOString(), restantesHoje: this.opts.limiteDiario - uso.usados };
   }
 
   private conferir(t: TextosGerados, f: FatosProduto) {
@@ -243,7 +251,7 @@ export class GeradorTexto {
 }
 
 /** Descarta valores impossíveis em vez de passar adiante um número errado. */
-export function limparPrint(d: DadosPrint): DadosPrint {
+export function limparPrint(d: DadosPrint, nImagens = 1): DadosPrint {
   const avisos = [...d.avisos];
   const valor = (n: number | null, nome: string) => {
     if (n === null) return null;
@@ -261,6 +269,13 @@ export function limparPrint(d: DadosPrint): DadosPrint {
     avisos.push(`Comissão descartada: ${comissao}% não parece real`);
     comissao = null;
   }
+  let foto = d.foto ?? null;
+  if (foto) {
+    const [y0, x0, y1, x1] = foto.caixa;
+    const ok = foto.caixa.length === 4 && foto.caixa.every((n) => Number.isFinite(n) && n >= 0 && n <= 1000)
+      && foto.imagem >= 0 && foto.imagem < nImagens && y1! - y0! >= 100 && x1! - x0! >= 100;
+    if (!ok) { avisos.push("Não deu para localizar a foto do produto"); foto = null; }
+  }
   const avaliacao = d.avaliacao !== null && d.avaliacao >= 0 && d.avaliacao <= 5 ? d.avaliacao : null;
   return {
     ...d,
@@ -271,6 +286,7 @@ export function limparPrint(d: DadosPrint): DadosPrint {
     avaliacao,
     caracteristicas: d.caracteristicas.map((c) => c.trim()).filter(Boolean).slice(0, 15).map((c) => c.slice(0, 200)),
     descricao: d.descricao?.slice(0, 2000) ?? null,
+    foto,
     avisos: [...new Set(avisos)],
   };
 }

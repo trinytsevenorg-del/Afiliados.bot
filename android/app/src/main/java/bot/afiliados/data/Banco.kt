@@ -111,7 +111,7 @@ interface AfiliadosDao {
 
 @Database(
     entities = [Nicho::class, Produto::class, VerificacaoPreco::class, TextoPromocional::class, Canal::class, ItemFila::class, Tentativa::class, Comissao::class, Atividade::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class BancoAfiliados : RoomDatabase() {
@@ -123,6 +123,13 @@ abstract class BancoAfiliados : RoomDatabase() {
             "💄" to "Beleza e cuidados pessoais", "🍳" to "Cozinha e utilidades", "⚽" to "Esportes e lazer",
             "🔧" to "Ferramentas", "🎁" to "Ofertas variadas",
         )
+
+        /** Versão 2: foto do produto guardada no aparelho. */
+        val MIGRACAO_1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE produtos ADD COLUMN fotoLocal TEXT")
+            }
+        }
 
         fun criar(ctx: Context): BancoAfiliados =
             Room.databaseBuilder(ctx, BancoAfiliados::class.java, "afiliados.db")
@@ -136,6 +143,7 @@ abstract class BancoAfiliados : RoomDatabase() {
                         }
                     }
                 })
+                .addMigrations(MIGRACAO_1_2)
                 .build()
     }
 }
