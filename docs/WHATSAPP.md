@@ -33,11 +33,8 @@ A sessão do WhatsApp precisa ficar salva. O Render grátis apaga os arquivos ao
 
 ## Passo 3: manter acordado
 
-O Render grátis dorme depois de 15 minutos. Dormindo, não posta.
-
-1. Crie conta grátis em cron-job.org.
-2. Crie um cron com a URL `https://SEU-SERVICO.onrender.com/api/health`.
-3. Repetição: a cada 10 minutos.
+Automático. No Render, o servidor visita a si mesmo a cada 10 minutos (`RENDER_EXTERNAL_URL`).
+Fora do Render, defina `KEEPALIVE_URL` com o endereço público. O cron-job.org virou opcional.
 
 ## Passo 4: chip e conexão
 

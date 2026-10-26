@@ -40,7 +40,7 @@ Projeto separado da BattleHub. Não compartilha código, banco nem contas.
 cd backend
 cp .env.example .env      # preencha APP_TOKEN e as chaves que tiver
 npm ci
-npm test                  # 53 testes
+npm test                  # 55 testes
 npm run build && npm start
 ```
 
