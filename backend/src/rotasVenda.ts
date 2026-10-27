@@ -51,7 +51,7 @@ export function registrarVenda(app: FastifyInstance, cfg: Config, licencas: Lice
   const email = new EmailBrevo({ chave: cfg.BREVO_API_KEY, remetente: cfg.EMAIL_REMETENTE, nome: cfg.EMAIL_NOME, site, suporte }, fetchImpl);
   /** Botão de compra: link da plataforma, ou o WhatsApp de vendas com a mensagem pronta. */
   const comprar = (link: string | undefined, plano: string) =>
-    link ?? (cfg.WHATSAPP_VENDAS ? `https://wa.me/${cfg.WHATSAPP_VENDAS}?text=${encodeURIComponent(`Oi! Quero o plano ${plano} do Achadinhos App. Meu e-mail é: `)}` : undefined);
+    link ?? (cfg.WHATSAPP_VENDAS ? `https://wa.me/${cfg.WHATSAPP_VENDAS}?text=${encodeURIComponent(`Oi! Quero o plano ${plano} do Achadinhos App.`)}` : undefined);
   const ativacoes = limitador(10);
 
   const exigirLicencas = () => {
