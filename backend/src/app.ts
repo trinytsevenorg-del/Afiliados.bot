@@ -259,7 +259,7 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
     return deps.telegram.testarDestino(chatId);
   });
 
-  registrarVenda(app, cfg, deps.licencas);
+  registrarVenda(app, cfg, deps.licencas, deps.fetchImpl);
 
   return app;
 }

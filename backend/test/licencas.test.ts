@@ -145,3 +145,36 @@ describe("servidor do cliente exige app licenciado", () => {
     expect((await app.inject({ url: "/api/health" })).statusCode).toBe(200);
   });
 });
+
+describe("venda pelo WhatsApp e chave por e-mail", () => {
+  it("botões do site abrem o WhatsApp; o painel manda a chave pelo Brevo", async () => {
+    const envios: { url: string; corpo: any }[] = [];
+    const cfg = cfgTeste({ ADMIN_TOKEN: ADMIN, WHATSAPP_VENDAS: "5567999990000", BREVO_API_KEY: "xkeysib-teste", EMAIL_REMETENTE: "vendas@x.com" });
+    const deps = criarDeps(cfg);
+    deps.licencas = lic(Date.now);
+    deps.fetchImpl = (async (u: string, init: RequestInit) => { envios.push({ url: String(u), corpo: JSON.parse(String(init.body)) }); return new Response("{}", { status: 201 }); }) as typeof fetch;
+    const app = await criarApp(cfg, deps);
+    const site = (await app.inject({ url: "/site" })).body;
+    expect(site).toContain("https://wa.me/5567999990000?text=");
+    expect(site).toContain("Comprar o Premium pelo WhatsApp");
+    const r = (await app.inject({ method: "POST", url: "/api/admin/licencas", headers: { authorization: `Bearer ${ADMIN}` }, payload: { plano: "pro", email: "cliente@x.com" } })).json();
+    expect(r).toMatchObject({ emailEnviado: true, plano: "pro" });
+    expect(envios[0]!.url).toBe("https://api.brevo.com/v3/smtp/email");
+    expect(envios[0]!.corpo.to).toEqual([{ email: "cliente@x.com" }]);
+    expect(envios[0]!.corpo.htmlContent).toContain(r.codigo);
+    expect(envios[0]!.corpo.htmlContent).toContain("https://central.teste/baixar");
+    expect(r.whatsapp).toContain(r.codigo);
+  });
+
+  it("sem e-mail configurado, devolve a mensagem para mandar no WhatsApp", async () => {
+    const cfg = cfgTeste({ ADMIN_TOKEN: ADMIN });
+    const deps = criarDeps(cfg);
+    deps.licencas = lic(Date.now);
+    const app = await criarApp(cfg, deps);
+    const r = (await app.inject({ method: "POST", url: "/api/admin/licencas", headers: { authorization: `Bearer ${ADMIN}` }, payload: { plano: "essencial", email: "c@x.com" } })).json();
+    expect(r.emailEnviado).toBe(false);
+    expect(r.whatsapp).toContain("https://central.teste/baixar");
+    const re = (await app.inject({ method: "POST", url: `/api/admin/licencas/${r.codigo}/reenviar`, headers: { authorization: `Bearer ${ADMIN}` } })).json();
+    expect(re.codigo).toBe(r.codigo);
+  });
+});

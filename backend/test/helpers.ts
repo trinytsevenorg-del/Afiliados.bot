@@ -38,6 +38,11 @@ export function cfgTeste(extra: Partial<Config> = {}): Config {
     LINK_SUPORTE: undefined,
     RELEASES_DIR: "releases-teste-inexistente",
     LICENCA_LIVRE: "1",
+    WHATSAPP_VENDAS: undefined,
+    BREVO_API_KEY: undefined,
+    EMAIL_REMETENTE: undefined,
+    EMAIL_NOME: "Achadinhos App",
+    SITE_URL: "https://central.teste",
     ...extra,
   };
 }

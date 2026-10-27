@@ -45,6 +45,14 @@ const Env = z.object({
   LINK_PREMIUM: opcional,
   /** Link do suporte (ex.: https://wa.me/55...). */
   LINK_SUPORTE: opcional,
+  /** WhatsApp de vendas, só números com 55 (ex.: 5567999999999). Sem LINK_<plano>, o botão de compra abre este WhatsApp. */
+  WHATSAPP_VENDAS: opcional,
+  /** E-mail da chave (Brevo, grátis): chave da API e remetente verificado. */
+  BREVO_API_KEY: opcional,
+  EMAIL_REMETENTE: opcional,
+  EMAIL_NOME: z.string().default("Achadinhos App"),
+  /** Endereço público do servidor central (no Render vem sozinho). */
+  SITE_URL: opcional,
   /** Pasta com o APK e o versao.json. */
   RELEASES_DIR: z.string().default("releases"),
   /** "1" = aceita app sem licença (só para o dono testar a versão de desenvolvimento). */

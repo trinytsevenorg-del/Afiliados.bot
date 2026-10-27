@@ -6,6 +6,7 @@ import type { Config } from "./config.js";
 import { IntegracaoErro } from "./integrations/types.js";
 import { aplicarEvento, atualizacoesAte, eventoHotmart, eventoKiwify, expiraEm, hmacSha1Hex, iguais, PLANOS, type Licencas } from "./licencas.js";
 import { paginaAdmin, paginaSite } from "./paginas.js";
+import { EmailBrevo, textoLicenca } from "./email.js";
 
 /** Rotas abertas (sem o token do app). O resto do backend continua exigindo o token. */
 export const ROTAS_PUBLICAS = ["/api/health", "/api/licenca/", "/api/app/versao", "/api/webhook/", "/api/admin/", "/baixar", "/admin", "/site", "/"];
@@ -43,8 +44,14 @@ function limitador(porMinuto: number) {
   };
 }
 
-export function registrarVenda(app: FastifyInstance, cfg: Config, licencas: Licencas | null) {
+export function registrarVenda(app: FastifyInstance, cfg: Config, licencas: Licencas | null, fetchImpl: typeof fetch = fetch) {
   const releases = resolve(cfg.RELEASES_DIR);
+  const site = (cfg.SITE_URL ?? process.env.RENDER_EXTERNAL_URL ?? "https://achadinhos-flqb.onrender.com").replace(/\/+$/, "");
+  const suporte = cfg.LINK_SUPORTE ?? (cfg.WHATSAPP_VENDAS ? `https://wa.me/${cfg.WHATSAPP_VENDAS}` : undefined);
+  const email = new EmailBrevo({ chave: cfg.BREVO_API_KEY, remetente: cfg.EMAIL_REMETENTE, nome: cfg.EMAIL_NOME, site, suporte }, fetchImpl);
+  /** Botão de compra: link da plataforma, ou o WhatsApp de vendas com a mensagem pronta. */
+  const comprar = (link: string | undefined, plano: string) =>
+    link ?? (cfg.WHATSAPP_VENDAS ? `https://wa.me/${cfg.WHATSAPP_VENDAS}?text=${encodeURIComponent(`Oi! Quero o plano ${plano} do Achadinhos App. Meu e-mail é: `)}` : undefined);
   const ativacoes = limitador(10);
 
   const exigirLicencas = () => {
@@ -56,7 +63,10 @@ export function registrarVenda(app: FastifyInstance, cfg: Config, licencas: Lice
   app.get("/site", async (_req, reply) => {
     exigirLicencas();
     const v = lerVersao(releases);
-    return reply.type("text/html; charset=utf-8").send(paginaSite({ essencial: cfg.LINK_ESSENCIAL, pro: cfg.LINK_PRO, premium: cfg.LINK_PREMIUM, suporte: cfg.LINK_SUPORTE, versao: v?.versao }));
+    return reply.type("text/html; charset=utf-8").send(paginaSite({
+      essencial: comprar(cfg.LINK_ESSENCIAL, "Essencial"), pro: comprar(cfg.LINK_PRO, "Pro"), premium: comprar(cfg.LINK_PREMIUM, "Premium"),
+      suporte, versao: v?.versao, porWhatsapp: !cfg.LINK_ESSENCIAL && !!cfg.WHATSAPP_VENDAS,
+    }));
   });
   app.get("/admin", async (_req, reply) => {
     exigirLicencas();
@@ -145,7 +155,27 @@ export function registrarVenda(app: FastifyInstance, cfg: Config, licencas: Lice
       .object({ plano: z.enum(["essencial", "pro", "premium"]), email: z.email(), pedido: z.string().max(100).nullish(), meses: z.number().int().min(1).max(36).nullish() })
       .parse(req.body);
     const pagoAte = b.plano === "premium" ? Date.now() + (b.meses ?? 1) * 31 * 86_400_000 : null;
-    return resumo(await lic.criar({ plano: b.plano, email: b.email, pedido: b.pedido, origem: "manual", pagoAte }));
+    const l = await lic.criar({ plano: b.plano, email: b.email, pedido: b.pedido, origem: "manual", pagoAte });
+    return { ...resumo(l), ...(await mandar(l)) };
+  });
+
+  /** Manda a chave por e-mail. Se não der, o painel mostra a mensagem pronta para o WhatsApp. */
+  const mandar = async (l: NonNullable<Awaited<ReturnType<Licencas["porCodigo"]>>>) => {
+    const whatsapp = textoLicenca(l, site, suporte).texto;
+    if (!email.configurado) return { emailEnviado: false, erroEmail: "E-mail não configurado (BREVO_API_KEY e EMAIL_REMETENTE)", whatsapp };
+    try {
+      await email.enviarLicenca(l);
+      return { emailEnviado: true, whatsapp };
+    } catch (e) {
+      return { emailEnviado: false, erroEmail: (e as Error).message, whatsapp };
+    }
+  };
+
+  app.post("/api/admin/licencas/:codigo/reenviar", async (req) => {
+    const lic = admin(req);
+    const l = await lic.porCodigo((req.params as { codigo: string }).codigo);
+    if (!l) throw new IntegracaoErro("nao_encontrado", "Licença não encontrada", 404);
+    return { ...resumo(l), ...(await mandar(l)) };
   });
 
   app.post("/api/admin/licencas/:codigo/liberar", async (req) => resumo(await admin(req).liberarAparelhos((req.params as { codigo: string }).codigo)));
