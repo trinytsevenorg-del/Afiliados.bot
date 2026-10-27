@@ -59,8 +59,8 @@ fun InicioTela(app: AfiliadosApp, nav: NavHostController) {
     LazyColumn(contentPadding = espaco, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { TopAppBar(title = { Text("Afiliados.bot", fontWeight = FontWeight.Bold) }) }
         if (!app.backend.configurado) item {
-            Cartao(Modifier.fillMaxWidth().clickable { nav.irPara("ajustes") }) {
-                Text("Backend não configurado. O catálogo funciona, mas IA, Shopee, Mercado Livre e Telegram ficam desligados. Toque para configurar.", Modifier.padding(16.dp))
+            Cartao(Modifier.fillMaxWidth().clickable { nav.irPara("assistente") }) {
+                Text("Servidor não configurado. O catálogo funciona, mas a IA e as postagens ficam desligadas. Toque para a configuração guiada.", Modifier.padding(16.dp))
             }
         }
         item {

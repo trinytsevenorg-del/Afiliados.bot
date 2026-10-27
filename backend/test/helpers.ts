@@ -37,6 +37,7 @@ export function cfgTeste(extra: Partial<Config> = {}): Config {
     LINK_PREMIUM: undefined,
     LINK_SUPORTE: undefined,
     RELEASES_DIR: "releases-teste-inexistente",
+    LICENCA_LIVRE: "1",
     ...extra,
   };
 }

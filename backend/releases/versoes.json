@@ -1,0 +1,16 @@
+{
+  "versoes": [
+    {
+      "versionCode": 12,
+      "versao": "1.0.0",
+      "data": 1793128368518,
+      "arquivo": "afiliados-bot-1.0.0.apk",
+      "novidades": [
+        "Licença e planos",
+        "Configuração guiada com imagens",
+        "Atualização pelo próprio app",
+        "Fila no servidor: posta com o celular desligado"
+      ]
+    }
+  ]
+}

@@ -14,7 +14,12 @@ import javax.crypto.spec.GCMParameterSpec
  * Guarda o token do backend cifrado com uma chave do Android Keystore
  * (a chave nunca sai do hardware/sistema). O token não está no APK.
  */
-class Cofre(ctx: Context) {
+interface Segredos {
+    fun salvar(nome: String, valor: String?)
+    fun ler(nome: String): String?
+}
+
+class Cofre(ctx: Context) : Segredos {
     private val prefs = ctx.getSharedPreferences("cofre", Context.MODE_PRIVATE)
     private val alias = "afiliados_token_v1"
 
@@ -32,7 +37,7 @@ class Cofre(ctx: Context) {
         return gen.generateKey()
     }
 
-    fun salvar(nome: String, valor: String?) {
+    override fun salvar(nome: String, valor: String?) {
         if (valor.isNullOrEmpty()) {
             prefs.edit().remove(nome).apply()
             return
@@ -42,7 +47,7 @@ class Cofre(ctx: Context) {
         prefs.edit().putString(nome, Base64.encodeToString(dados, Base64.NO_WRAP)).apply()
     }
 
-    fun ler(nome: String): String? {
+    override fun ler(nome: String): String? {
         val b64 = prefs.getString(nome, null) ?: return null
         return try {
             val dados = Base64.decode(b64, Base64.NO_WRAP)
@@ -58,6 +63,11 @@ class Cofre(ctx: Context) {
 /** Preferências que não são segredo. */
 class Preferencias(ctx: Context) {
     private val p = ctx.getSharedPreferences("preferencias", Context.MODE_PRIVATE)
+
+    /** Já passou (ou pulou) a configuração guiada. */
+    var assistenteVisto: Boolean
+        get() = p.getBoolean("assistenteVisto", false)
+        set(v) = p.edit().putBoolean("assistenteVisto", v).apply()
 
     var backendUrl: String
         get() = p.getString("backendUrl", "") ?: ""

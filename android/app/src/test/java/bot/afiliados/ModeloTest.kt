@@ -10,18 +10,18 @@ class ModeloTest {
     private val m = Mensagem.MODELO_PADRAO
 
     @Test fun modeloCompletoIgualAoDoPrint() {
-        val t = Mensagem.aplicarModelo(m, "Rider R1 Brasil: conforto e estilo!", 32.0, 21.0, "OFERTANETS")
+        val t = Mensagem.aplicarModelo(m, "Chinelo confortável!", 32.0, 21.0, "CUPOM10")
         val final = Mensagem.montar(t, "https://meli.la/abc")
         assertEquals(
             """
-            💥 Rider R1 Brasil: conforto e estilo!
+            💥 Chinelo confortável!
 
             De: ~R$ 32,00~ ❌
             💸 Por: *R$ 21,00* 🔥
 
             🔗 Compre aqui: https://meli.la/abc
 
-            🎟️ Use o cupom: *OFERTANETS*
+            🎟️ Use o cupom: *CUPOM10*
 
             ⚠️ Promoção sujeita a alteração a qualquer momento.
             """.trimIndent(),

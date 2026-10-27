@@ -12,6 +12,7 @@ import { IntegracaoErro } from "./integrations/types.js";
 import { ArmazemFilaPostgres, FilaServidor } from "./fila.js";
 import { ArmazemLicencasPostgres, lerChavePrivada, Licencas } from "./licencas.js";
 import { registrarVenda, rotaPublica } from "./rotasVenda.js";
+import { chavePublica, conferidorDeLicenca } from "./licencaApp.js";
 import { analisarLink, extrairIds, LinkInvalido, validarUrl } from "./lib/links.js";
 
 export interface Deps {
@@ -105,6 +106,7 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
   });
 
   const geral = limitador(120);
+  const licencaDoApp = conferidorDeLicenca(chavePublica());
   // Um lote de prints chama a IA várias vezes seguidas.
   const ia = limitador(40);
 
@@ -114,6 +116,10 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
     const h = req.headers.authorization ?? "";
     const tok = h.startsWith("Bearer ") ? h.slice(7) : "";
     if (!tok || !tokenIgual(tok, cfg.APP_TOKEN)) return reply.code(401).send({ erro: "nao_autorizado", mensagem: "Token do app ausente ou inválido" });
+    if (cfg.LICENCA_LIVRE !== "1") {
+      const l = licencaDoApp(String(req.headers["x-licenca"] ?? "") || undefined);
+      if (!l.ok) return reply.code(402).send({ erro: "licenca", mensagem: l.motivo });
+    }
   });
 
   app.setErrorHandler((err, _req, reply) => {

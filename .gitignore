@@ -1,3 +1,6 @@
 .DS_Store
 *.log
 .env
+
+# Chave de assinatura do APK de venda: guardar fora do Git.
+android/chave/

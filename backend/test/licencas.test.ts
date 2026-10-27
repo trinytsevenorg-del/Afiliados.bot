@@ -77,8 +77,12 @@ describe("licenças", () => {
 describe("rotas de venda", () => {
   async function montar() {
     const dir = mkdtempSync(join(tmpdir(), "rel-"));
-    writeFileSync(join(dir, "versao.json"), JSON.stringify({ versionCode: 12, versao: "1.0.0", data: 1_800_000_000_000, novidades: ["Licenças"] }));
-    writeFileSync(join(dir, "afiliados-bot.apk"), "APK");
+    writeFileSync(join(dir, "versoes.json"), JSON.stringify({ versoes: [
+      { versionCode: 12, versao: "1.0.0", data: 1_800_000_000_000, arquivo: "afiliados-bot-1.0.0.apk", novidades: ["Licenças"] },
+      { versionCode: 13, versao: "1.1.0", data: 1_900_000_000_000, arquivo: "afiliados-bot-1.1.0.apk", novidades: ["Novo"] },
+    ] }));
+    writeFileSync(join(dir, "afiliados-bot-1.0.0.apk"), "APK10");
+    writeFileSync(join(dir, "afiliados-bot-1.1.0.apk"), "APK11");
     const cfg = cfgTeste({ ADMIN_TOKEN: ADMIN, KIWIFY_TOKEN: "segredo-kiwify", HOTMART_HOTTOK: "hottok", RELEASES_DIR: dir });
     const deps = criarDeps(cfg);
     deps.licencas = lic(Date.now);
@@ -88,8 +92,10 @@ describe("rotas de venda", () => {
   it("site, versão e download são abertos; o resto do backend continua fechado", async () => {
     const { app } = await montar();
     expect((await app.inject({ url: "/site" })).body).toContain("Planos");
-    expect((await app.inject({ url: "/api/app/versao" })).json()).toMatchObject({ versionCode: 12, url: "/baixar" });
-    expect((await app.inject({ url: "/baixar" })).body).toBe("APK");
+    expect((await app.inject({ url: "/api/app/versao" })).json()).toMatchObject({ versionCode: 13, url: "/baixar" });
+    expect((await app.inject({ url: "/baixar" })).body).toBe("APK11");
+    // Essencial: baixa a versão que o plano dele cobre.
+    expect((await app.inject({ url: "/baixar?ate=1850000000000" })).body).toBe("APK10");
     expect((await app.inject({ url: "/api/fila/status" })).statusCode).toBe(401);
     expect((await app.inject({ url: "/api/licenca/../fila/status" })).statusCode).not.toBe(200);
   });
@@ -115,5 +121,27 @@ describe("rotas de venda", () => {
     expect(criada.json()).toMatchObject({ plano: "premium", origem: "manual" });
     const lista = await app.inject({ url: "/api/admin/licencas", headers: { authorization: `Bearer ${ADMIN}` } });
     expect(lista.json().licencas).toHaveLength(2);
+  });
+});
+
+describe("servidor do cliente exige app licenciado", () => {
+  it("sem token, token falso ou vencido: 402; token do dono: passa", async () => {
+    const { conferidorDeLicenca } = await import("../src/licencaApp.js");
+    const l = lic(() => 1_800_000_000_000);
+    const nova = await l.criar({ plano: "premium", email: "a@b.com", origem: "manual", pagoAte: 1_800_000_000_000 + 30 * DIA });
+    const { token } = await l.ativar({ codigo: nova.codigo, aparelho: "aparelho-1" });
+    let agora = 1_800_000_000_000;
+    const conferir = conferidorDeLicenca(publicKey, () => agora);
+    expect(conferir(token)).toEqual({ ok: true, plano: "premium" });
+    expect(conferir(undefined).ok).toBe(false);
+    expect(conferir(token.slice(0, -4) + "AAAA").ok).toBe(false);
+    agora += 40 * DIA;
+    expect(conferir(token)).toMatchObject({ ok: false, motivo: expect.stringContaining("vencida") });
+
+    const cfg = cfgTeste({ LICENCA_LIVRE: undefined });
+    const app = await criarApp(cfg, criarDeps(cfg));
+    const r = await app.inject({ url: "/api/fila/status", headers: { authorization: `Bearer ${cfg.APP_TOKEN}` } });
+    expect(r.statusCode).toBe(402);
+    expect((await app.inject({ url: "/api/health" })).statusCode).toBe(200);
   });
 });

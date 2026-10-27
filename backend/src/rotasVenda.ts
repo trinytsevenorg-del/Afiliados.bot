@@ -15,14 +15,21 @@ export function rotaPublica(url: string) {
   return ROTAS_PUBLICAS.some((r) => (r.endsWith("/") && r !== "/" ? caminho.startsWith(r) : caminho === r));
 }
 
-export interface VersaoApp { versionCode: number; versao: string; data: number; novidades: string[] }
+export interface VersaoApp { versionCode: number; versao: string; data: number; arquivo: string; novidades: string[] }
 
-export function lerVersao(dir: string): VersaoApp | null {
+/** releases/versoes.json: todas as versões publicadas (o Essencial pode baixar a do plano dele). */
+export function lerVersoes(dir: string): VersaoApp[] {
   try {
-    return JSON.parse(readFileSync(join(dir, "versao.json"), "utf8")) as VersaoApp;
+    const j = JSON.parse(readFileSync(join(dir, "versoes.json"), "utf8")) as { versoes: VersaoApp[] };
+    return [...j.versoes].sort((a, b) => b.versionCode - a.versionCode);
   } catch {
-    return null;
+    return [];
   }
+}
+
+/** A mais nova; com [ate], a mais nova lançada até essa data. */
+export function lerVersao(dir: string, ate?: number): VersaoApp | null {
+  return lerVersoes(dir).find((v) => ate === undefined || v.data <= ate) ?? null;
 }
 
 /** Limite por IP para a ativação (evita tentar códigos no chute). */
@@ -73,13 +80,16 @@ export function registrarVenda(app: FastifyInstance, cfg: Config, licencas: Lice
   app.get("/api/app/versao", async () => {
     const v = lerVersao(releases);
     if (!v) throw new IntegracaoErro("nao_encontrado", "Nenhuma versão publicada", 404);
-    return { ...v, url: "/baixar" };
+    const { arquivo: _a, ...resto } = v;
+    return { ...resto, url: "/baixar" };
   });
 
-  app.get("/baixar", async (_req, reply) => {
-    const apk = join(releases, "afiliados-bot.apk");
-    if (!existsSync(apk)) throw new IntegracaoErro("nao_encontrado", "APK ainda não publicado", 404);
-    const v = lerVersao(releases);
+  // ?ate=<ms>: a versão mais nova até essa data (fim das atualizações do plano).
+  app.get("/baixar", async (req, reply) => {
+    const ate = Number((req.query as { ate?: string }).ate);
+    const v = lerVersao(releases, Number.isFinite(ate) && ate > 0 ? ate : undefined);
+    const apk = v ? join(releases, v.arquivo.replace(/[^\w.-]/g, "")) : "";
+    if (!v || !existsSync(apk)) throw new IntegracaoErro("nao_encontrado", "APK ainda não publicado", 404);
     return reply
       .header("content-type", "application/vnd.android.package-archive")
       .header("content-length", statSync(apk).size)

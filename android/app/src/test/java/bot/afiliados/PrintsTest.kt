@@ -19,7 +19,15 @@ import java.io.File
 @Config(sdk = [34], qualifiers = "w390dp-h844dp-night-xxhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PrintsTest {
-    @get:Rule val regra = createAndroidComposeRule<MainActivity>()
+    val regra = createAndroidComposeRule<MainActivity>()
+    // Pula a configuração guiada antes de abrir o app.
+    @get:Rule val cadeia: org.junit.rules.RuleChain = org.junit.rules.RuleChain.outerRule(object : org.junit.rules.ExternalResource() {
+        override fun before() {
+            androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+                .getSharedPreferences("preferencias", 0).edit().putBoolean("assistenteVisto", pularAssistente).commit()
+        }
+    }).around(regra)
+    val pularAssistente = true
 
     @Test fun prints() {
         val pasta = System.getProperty("prints").orEmpty()

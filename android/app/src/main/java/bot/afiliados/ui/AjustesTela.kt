@@ -105,6 +105,8 @@ fun AjustesTela(app: AfiliadosApp, nav: NavHostController) {
 
     LazyColumn(contentPadding = espaco, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { TopAppBar(title = { Text("Ajustes") }) }
+        item { SecaoLicenca(app) }
+        item { OutlinedButton(onClick = { nav.irPara("assistente") }, modifier = Modifier.fillMaxWidth()) { Text("Configuração guiada (passo a passo)") } }
         item {
             Secao("Backend") {
                 Text("O backend guarda as chaves de IA, Shopee, Mercado Livre e Telegram. Elas nunca ficam no app.", style = MaterialTheme.typography.bodySmall)

@@ -1,0 +1,32 @@
+# Publica a imagem do servidor para os clientes (Render → Existing Image).
+# Depois do primeiro envio: GitHub → Packages → afiliados-bot → Package settings → Change visibility → Public.
+name: Imagem do servidor
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", ".github/workflows/imagem-servidor.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  imagem:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Testes
+        working-directory: backend
+        run: npm ci && npm run typecheck && npm test
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: |
+            ghcr.io/trinytsevenorg-del/afiliados-bot:latest
+            ghcr.io/trinytsevenorg-del/afiliados-bot:${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}

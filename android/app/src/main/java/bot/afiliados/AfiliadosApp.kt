@@ -23,9 +23,19 @@ class AfiliadosApp : Application() {
     val banco by lazy { BancoAfiliados.criar(this) }
     val cofre by lazy { Cofre(this) }
     val prefs by lazy { Preferencias(this) }
-    val backend by lazy { Backend({ prefs.backendUrl }, { cofre.ler(TOKEN) }) }
+    val backend by lazy { Backend({ prefs.backendUrl }, { cofre.ler(TOKEN) }, licenca = { licencas.token }) }
     val repo by lazy { Repositorio(banco.dao(), backend, prefs) }
     val backup by lazy { Backup(banco.dao()) }
+    val licencas by lazy {
+        bot.afiliados.data.Licencas(this, BuildConfig.CENTRAL_URL, bot.afiliados.data.ConferidorLicenca(BuildConfig.LICENCA_PUBLICA, BuildConfig.DATA_VERSAO))
+    }
+    /** Situação da licença, observada pela interface. */
+    val licenca by lazy { androidx.compose.runtime.mutableStateOf(situacaoLicenca()) }
+
+    /** APK de venda reassinado (clone) nunca abre, mesmo com licença. */
+    fun situacaoLicenca(): bot.afiliados.data.SituacaoLicenca =
+        if (BuildConfig.EXIGIR_LICENCA && bot.afiliados.data.Integridade.assinatura(this) != BuildConfig.ASSINATURA) bot.afiliados.data.SituacaoLicenca.Adulterado
+        else licencas.situacao()
     /** Tema atual, observado pela interface. */
     val tema by lazy { androidx.compose.runtime.mutableStateOf(prefs.tema) }
     /** Prints recebidos pelo "Compartilhar", esperando o formulário abrir. */
@@ -35,6 +45,7 @@ class AfiliadosApp : Application() {
         super.onCreate()
         Notificacoes.criarCanal(this)
         escopo.launch { recuperar() }
+        escopo.launch { licencas.renovarSePrecisar(); licenca.value = situacaoLicenca() }
     }
 
     /** Ao abrir: trata itens interrompidos e garante que cada agendado tem sua tarefa. */

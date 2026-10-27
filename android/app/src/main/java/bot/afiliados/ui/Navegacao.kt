@@ -1,5 +1,11 @@
 package bot.afiliados.ui
 
+import androidx.compose.runtime.remember
+
+import bot.afiliados.data.SituacaoLicenca
+
+import bot.afiliados.BuildConfig
+
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,6 +76,10 @@ fun AppRaiz(app: AfiliadosApp, atividade: MainActivity, desbloqueado: Boolean, a
         }
         return
     }
+    if (BuildConfig.EXIGIR_LICENCA && app.licenca.value !is SituacaoLicenca.Ativa) {
+        TelaLicenca(app)
+        return
+    }
     val nav = rememberNavController()
     val entrada by nav.currentBackStackEntryAsState()
     val rotaAtual = entrada?.destination?.route
@@ -112,7 +122,9 @@ fun AppRaiz(app: AfiliadosApp, atividade: MainActivity, desbloqueado: Boolean, a
         },
     ) { pad ->
         Box(Modifier.padding(bottom = pad.calculateBottomPadding())) {
-            NavHost(nav, startDestination = "inicio") {
+            // Primeira vez: começa na configuração guiada.
+            val inicio = remember { if (!app.backend.configurado && !app.prefs.assistenteVisto) "assistente" else "inicio" }
+            NavHost(nav, startDestination = inicio) {
                 composable("inicio") { InicioTela(app, nav) }
                 composable("produtos") { ProdutosTela(app, nav) }
                 composable("nichos") { NichosTela(app, nav) }
@@ -120,6 +132,7 @@ fun AppRaiz(app: AfiliadosApp, atividade: MainActivity, desbloqueado: Boolean, a
                 composable("ajustes") { AjustesTela(app, nav) }
                 composable("comissoes") { ComissoesTela(app, nav) }
                 composable("lote") { LoteTela(app, nav) }
+                composable("assistente") { AssistenteTela(app, nav) }
                 composable("novo-produto?link={link}", arguments = listOf(navArgument("link") { type = NavType.StringType; nullable = true; defaultValue = null })) {
                     ProdutoFormTela(app, nav, produtoId = null, linkInicial = it.arguments?.getString("link"))
                 }

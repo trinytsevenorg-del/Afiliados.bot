@@ -47,6 +47,8 @@ const Env = z.object({
   LINK_SUPORTE: opcional,
   /** Pasta com o APK e o versao.json. */
   RELEASES_DIR: z.string().default("releases"),
+  /** "1" = aceita app sem licença (só para o dono testar a versão de desenvolvimento). */
+  LICENCA_LIVRE: opcional,
 });
 
 export type Config = z.infer<typeof Env>;

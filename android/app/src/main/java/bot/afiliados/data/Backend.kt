@@ -23,7 +23,7 @@ sealed class FalhaBackend(msg: String) : Exception(msg) {
 }
 
 @Serializable data class ErroApi(val erro: String = "", val mensagem: String = "")
-@Serializable data class Saude(val ok: Boolean, val versao: String = "")
+@Serializable data class Saude(val ok: Boolean, val versao: String = "", val banco: String = "")
 @Serializable data class Operacao(val id: String, val descricao: String, val implementada: Boolean, val disponivel: Boolean, val motivo: String? = null)
 @Serializable data class StatusIntegracao(val id: String, val nome: String, val estado: String, val detalhe: String, val operacoes: List<Operacao> = emptyList(), val comoConfigurar: String? = null, val verificadoEm: String = "")
 @Serializable data class ListaStatus(val integracoes: List<StatusIntegracao>)
@@ -122,6 +122,8 @@ class Backend(
         .readTimeout(70, TimeUnit.SECONDS)
         .callTimeout(80, TimeUnit.SECONDS)
         .build(),
+    /** Token da licença: o servidor do cliente só trabalha para app licenciado. */
+    private val licenca: () -> String? = { null },
 ) {
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
     private val tipoJson = "application/json".toMediaType()
@@ -135,6 +137,7 @@ class Backend(
         val req = Request.Builder()
             .url(base + caminho)
             .header("Authorization", "Bearer $tok")
+            .apply { licenca()?.let { header("X-Licenca", it) } }
             .method(metodo, corpo?.toRequestBody(tipoJson))
             .build()
         val resp = try {
