@@ -28,6 +28,25 @@ const Env = z.object({
   DATABASE_URL: opcional,
   WA_INTERVALO_MIN: z.coerce.number().int().min(1).default(10),
   WA_MAX_DIA: z.coerce.number().int().min(1).default(40),
+  // ---------- Venda (só no servidor central do dono) ----------
+  /** Chave privada ECDSA P-256 (PEM ou base64). Liga o modo central de licenças. */
+  LICENCA_CHAVE_PRIVADA: opcional,
+  /** Token do painel /admin. Mínimo 32 caracteres. */
+  ADMIN_TOKEN: opcional,
+  /** Token do webhook da Kiwify (assina o corpo com HMAC-SHA1). */
+  KIWIFY_TOKEN: opcional,
+  /** Hottok do webhook da Hotmart. */
+  HOTMART_HOTTOK: opcional,
+  /** "idDoProduto:plano,..." (planos: essencial, pro, premium). */
+  PRODUTOS_PLANOS: opcional,
+  /** Links de compra mostrados na página de vendas. */
+  LINK_ESSENCIAL: opcional,
+  LINK_PRO: opcional,
+  LINK_PREMIUM: opcional,
+  /** Link do suporte (ex.: https://wa.me/55...). */
+  LINK_SUPORTE: opcional,
+  /** Pasta com o APK e o versao.json. */
+  RELEASES_DIR: z.string().default("releases"),
 });
 
 export type Config = z.infer<typeof Env>;

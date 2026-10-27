@@ -27,6 +27,16 @@ export function cfgTeste(extra: Partial<Config> = {}): Config {
     DATABASE_URL: undefined,
     WA_INTERVALO_MIN: 10,
     WA_MAX_DIA: 40,
+    LICENCA_CHAVE_PRIVADA: undefined,
+    ADMIN_TOKEN: undefined,
+    KIWIFY_TOKEN: undefined,
+    HOTMART_HOTTOK: undefined,
+    PRODUTOS_PLANOS: undefined,
+    LINK_ESSENCIAL: undefined,
+    LINK_PRO: undefined,
+    LINK_PREMIUM: undefined,
+    LINK_SUPORTE: undefined,
+    RELEASES_DIR: "releases-teste-inexistente",
     ...extra,
   };
 }

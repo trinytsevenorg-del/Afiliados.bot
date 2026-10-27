@@ -10,6 +10,8 @@ import { Telegram } from "./integrations/telegram.js";
 import { ArmazemComErro, ArmazemPostgres, normalizarUrlBanco, WhatsApp } from "./integrations/whatsapp.js";
 import { IntegracaoErro } from "./integrations/types.js";
 import { ArmazemFilaPostgres, FilaServidor } from "./fila.js";
+import { ArmazemLicencasPostgres, lerChavePrivada, Licencas } from "./licencas.js";
+import { registrarVenda, rotaPublica } from "./rotasVenda.js";
 import { analisarLink, extrairIds, LinkInvalido, validarUrl } from "./lib/links.js";
 
 export interface Deps {
@@ -19,6 +21,8 @@ export interface Deps {
   telegram: Telegram;
   whatsapp: WhatsApp;
   fila: FilaServidor;
+  /** Só no servidor central do dono (LICENCA_CHAVE_PRIVADA + banco). */
+  licencas: Licencas | null;
   fetchImpl?: typeof fetch;
 }
 
@@ -39,7 +43,18 @@ export function criarDeps(cfg: Config): Deps {
     telegram,
     whatsapp,
     fila: new FilaServidor(banco && "pool" in banco ? new ArmazemFilaPostgres(banco.pool) : null, { telegram, whatsapp }),
+    licencas: banco && "pool" in banco && cfg.LICENCA_CHAVE_PRIVADA ? criarLicencas(banco.pool, cfg.LICENCA_CHAVE_PRIVADA) : null,
   };
+}
+
+function criarLicencas(pool: pg.Pool, chave: string) {
+  try {
+    return new Licencas(new ArmazemLicencasPostgres(pool), lerChavePrivada(chave));
+  } catch (e) {
+    // Chave colada errada não derruba o servidor: só desliga a venda.
+    console.error("LICENCA_CHAVE_PRIVADA inválida:", (e as Error).message);
+    return null;
+  }
 }
 
 /** Um só pool de conexões para a sessão do WhatsApp e a fila. */
@@ -95,7 +110,7 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
 
   app.addHook("onRequest", async (req, reply) => {
     if (!geral(req.ip)) return reply.code(429).send({ erro: "limite", mensagem: "Muitas requisições. Espere um minuto." });
-    if (req.url === "/api/health") return;
+    if (rotaPublica(req.url)) return;
     const h = req.headers.authorization ?? "";
     const tok = h.startsWith("Bearer ") ? h.slice(7) : "";
     if (!tok || !tokenIgual(tok, cfg.APP_TOKEN)) return reply.code(401).send({ erro: "nao_autorizado", mensagem: "Token do app ausente ou inválido" });
@@ -237,6 +252,8 @@ export async function criarApp(cfg: Config, deps: Deps): Promise<FastifyInstance
     const { chatId } = z.object({ chatId: z.string().min(2).max(40) }).parse(req.body);
     return deps.telegram.testarDestino(chatId);
   });
+
+  registrarVenda(app, cfg, deps.licencas);
 
   return app;
 }

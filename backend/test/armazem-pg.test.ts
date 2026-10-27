@@ -2,6 +2,7 @@ import pg from "pg";
 import { describe, expect, it } from "vitest";
 import { ArmazemFilaPostgres, type ItemServidor } from "../src/fila.js";
 import { ArmazemPostgres } from "../src/integrations/whatsapp.js";
+import { ArmazemLicencasPostgres } from "../src/licencas.js";
 
 // Roda só quando há um Postgres de teste (PG_TESTE=postgres://...).
 const url = process.env.PG_TESTE;
@@ -40,6 +41,21 @@ describe.skipIf(!url)("Armazém no Postgres", () => {
     await a.limpar(100);
     expect(await a.pegar("fila-1")).toBeNull();
     expect(await a.pegar("fila-2")).not.toBeNull();
+    await pool.end();
+  });
+
+  it("licenças: grava e acha por código, pedido e assinatura", async () => {
+    const pool = new pg.Pool({ connectionString: url });
+    await pool.query("DROP TABLE IF EXISTS licencas");
+    const a = new ArmazemLicencasPostgres(pool);
+    const l = { codigo: "ABOT-AAAA-BBBB-CCCC", plano: "premium" as const, email: "x@y.com", pedido: "P1", assinatura: "S1", origem: "kiwify" as const, criadoEm: 5, pagoAte: 10, ativo: true, motivo: null, aparelhos: ["c1"] };
+    await a.salvar(l);
+    await a.salvar({ ...l, aparelhos: ["c1", "c2"] });
+    expect((await a.porCodigo(l.codigo))!.aparelhos).toEqual(["c1", "c2"]);
+    expect((await a.porPedido("X@y.com", "P1"))!.codigo).toBe(l.codigo);
+    expect((await a.porAssinatura("S1"))!.codigo).toBe(l.codigo);
+    expect((await a.porPedidoOrigem("kiwify", "P1"))!.codigo).toBe(l.codigo);
+    expect(await a.listar(10)).toHaveLength(1);
     await pool.end();
   });
 });

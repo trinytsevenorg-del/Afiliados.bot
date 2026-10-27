@@ -11,6 +11,8 @@ ENV NODE_ENV=production DATA_DIR=/data
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json ./
+# APK e versao.json do app (página /baixar e atualização).
+COPY releases ./releases
 RUN mkdir -p /data && chown node /data
 USER node
 VOLUME /data
