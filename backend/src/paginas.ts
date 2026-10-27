@@ -67,9 +67,9 @@ details{border-bottom:1px solid var(--linha);padding:14px 0}summary{cursor:point
   <div class="card passo"><b>Passo a passo no app</b><p>Configuração guiada com imagens. Sem programar, sem computador.</p></div>
 </div></section>
 <section class="wrap" id="planos"><h2>Planos</h2><div class="grade">
-  ${plano("essencial", "Essencial", ["App completo, versão atual", "Pagamento único, seu para sempre", "1 celular", "Sem atualizações"])}
-  ${plano("premium", "Premium", ["Tudo do app, sempre atualizado", "Novidades chegam sozinhas no app", "Suporte prioritário", "Até 3 celulares", "Cancele quando quiser"], true)}
-  ${plano("pro", "Pro", ["App completo", "Pagamento único", "6 meses de atualizações", "Suporte por 6 meses", "Até 2 celulares"])}
+  ${plano("essencial", "Essencial", ["App completo, versão atual", "Pagamento único, seu para sempre", "A gente te ensina a configurar", "1 celular", "Sem atualizações"])}
+  ${plano("premium", "Premium", ["Tudo do app, sempre atualizado", "A gente configura pra você", "Novidades chegam sozinhas no app", "Suporte prioritário", "Até 3 celulares", "Cancele quando quiser"], true)}
+  ${plano("pro", "Pro", ["App completo", "Pagamento único", "A gente configura pra você", "6 meses de atualizações", "Suporte por 6 meses", "Até 2 celulares"])}
 </div>
 <p class="aviso">${o.porWhatsapp
     ? "O botão abre o nosso WhatsApp. Depois do pagamento, você recebe ali mesmo a chave de acesso e o link para baixar o app."
