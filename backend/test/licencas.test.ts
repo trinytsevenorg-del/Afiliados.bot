@@ -166,13 +166,15 @@ describe("venda pelo WhatsApp e chave por e-mail", () => {
     expect(r.whatsapp).toContain(r.codigo);
   });
 
-  it("sem e-mail configurado, devolve a mensagem para mandar no WhatsApp", async () => {
+  it("venda pelo WhatsApp: só o número do cliente; a mensagem traz chave e download", async () => {
     const cfg = cfgTeste({ ADMIN_TOKEN: ADMIN });
     const deps = criarDeps(cfg);
     deps.licencas = lic(Date.now);
     const app = await criarApp(cfg, deps);
-    const r = (await app.inject({ method: "POST", url: "/api/admin/licencas", headers: { authorization: `Bearer ${ADMIN}` }, payload: { plano: "essencial", email: "c@x.com" } })).json();
+    const r = (await app.inject({ method: "POST", url: "/api/admin/licencas", headers: { authorization: `Bearer ${ADMIN}` }, payload: { plano: "essencial", whatsapp: "(67) 99999-1234" } })).json();
     expect(r.emailEnviado).toBe(false);
+    expect(r.email).toBe("whatsapp:67999991234");
+    expect(r.whatsapp).toContain(`*${r.codigo}*`);
     expect(r.whatsapp).toContain("https://central.teste/baixar");
     const re = (await app.inject({ method: "POST", url: `/api/admin/licencas/${r.codigo}/reenviar`, headers: { authorization: `Bearer ${ADMIN}` } })).json();
     expect(re.codigo).toBe(r.codigo);

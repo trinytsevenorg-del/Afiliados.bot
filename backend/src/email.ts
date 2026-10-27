@@ -33,7 +33,20 @@ export function textoLicenca(l: Licenca, site: string, suporte?: string) {
 </ol>
 <p style="color:#666;font-size:13px">Não compartilhe a chave: ela vale para ${PLANOS[l.plano].aparelhos} celular(es).${suporte ? ` Dúvidas: <a href="${esc(suporte)}">fale com o suporte</a>.` : ""}</p>
 </div>`;
-  const texto = `Sua chave do Achadinhos App (${plano}): ${l.codigo}\nBaixe o app: ${site}/baixar\nNo app, toque em "Tenho um código" e cole a chave.`;
+  const texto = [
+    `Obrigado pela compra! 🎉 Seu plano: *${plano}*`,
+    ``,
+    `🔑 Sua chave: *${l.codigo}*`,
+    ``,
+    `📲 Baixe o app: ${site}/baixar`,
+    ``,
+    `Como ativar:`,
+    `1. Abra o link acima no celular Android e instale (se pedir, permita instalar).`,
+    `2. Abra o app e toque em *Tenho um código*.`,
+    `3. Cole a chave e siga a configuração guiada.`,
+    ``,
+    `Não compartilhe a chave: vale para ${PLANOS[l.plano].aparelhos} celular(es).`,
+  ].join("\n");
   return { assunto, html, texto };
 }
 

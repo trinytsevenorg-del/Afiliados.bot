@@ -72,7 +72,7 @@ details{border-bottom:1px solid var(--linha);padding:14px 0}summary{cursor:point
   ${plano("pro", "Pro", ["App completo", "Pagamento único", "6 meses de atualizações", "Suporte por 6 meses", "Até 2 celulares"])}
 </div>
 <p class="aviso">${o.porWhatsapp
-    ? "O botão abre o nosso WhatsApp. Depois do pagamento, você recebe no seu e-mail a chave de acesso e o link para baixar o app."
+    ? "O botão abre o nosso WhatsApp. Depois do pagamento, você recebe ali mesmo a chave de acesso e o link para baixar o app."
     : "Depois da compra, você recebe no e-mail a chave de acesso (ou use o e-mail e o número do pedido) e o link para baixar o app."}</p></section>
 <section class="wrap"><h2>Perguntas</h2>
   <details><summary>Preciso de computador?</summary><p>Não. Tudo é feito pelo celular, com o passo a passo do app.</p></details>
@@ -100,8 +100,8 @@ td button{background:transparent;color:var(--ouro2);border:1px solid var(--linha
 <div class="card"><label>Token do painel (ADMIN_TOKEN)</label><input id="tok" type="password" autocomplete="off"><div class="msg" id="m0"></div></div>
 <div class="card"><b>Criar licença (venda por Pix ou presente)</b>
   <div class="linha"><div><label>Plano</label><select id="plano"><option value="essencial">Essencial</option><option value="pro">Pro</option><option value="premium">Premium</option></select></div>
-  <div><label>E-mail do cliente</label><input id="email" type="email"></div><div><label>Meses (Premium)</label><input id="meses" type="number" value="1" min="1" max="36"></div></div>
-  <p><button class="btn" id="criar">Criar e mandar por e-mail</button></p><div class="msg" id="m1"></div></div>
+  <div><label>WhatsApp do cliente (com DDD)</label><input id="zapcli" type="tel" placeholder="67999999999"></div><div><label>Meses (Premium)</label><input id="meses" type="number" value="1" min="1" max="36"></div></div>
+  <p><button class="btn" id="criar">Criar chave e abrir o WhatsApp</button></p><div class="msg" id="m1"></div></div>
 <div class="card"><b>Licenças</b> <button class="btn sec" id="atualizar" style="padding:6px 14px;font-size:14px">Atualizar</button>
   <div class="tab"><table><thead><tr><th>Código</th><th>Plano</th><th>E-mail / pedido</th><th>Situação</th><th>Celulares</th><th></th></tr></thead><tbody id="lista"></tbody></table></div></div>
 </div><script>
@@ -112,12 +112,15 @@ const data=ms=>ms?new Date(ms).toLocaleDateString("pt-BR"):"sempre";
 async function api(m,u,b){const r=await fetch(u,{method:m,headers:{authorization:"Bearer "+$("tok").value,"content-type":"application/json"},body:b?JSON.stringify(b):undefined});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.mensagem||("Erro "+r.status));return j}
 function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c])}
 async function carregar(){try{const j=await api("GET","/api/admin/licencas");$("m0").textContent=j.licencas.length+" licenças";$("m0").className="msg";
-$("lista").innerHTML=j.licencas.map(l=>'<tr><td class="codigo">'+esc(l.codigo)+'</td><td>'+esc(l.nomePlano)+'</td><td>'+esc(l.email)+'<br><small>'+esc(l.origem)+' · '+esc(l.pedido)+'</small></td><td>'+(l.ativo?'ativa':'<span class="erro">desativada</span>')+'<br><small>expira: '+data(l.expira)+' · atualiza até '+data(l.atualizacoesAte)+'</small>'+(l.motivo?'<br><small>'+esc(l.motivo)+'</small>':'')+'</td><td>'+l.aparelhos.length+'</td><td><button data-a="reenviar" data-c="'+esc(l.codigo)+'">Reenviar e-mail</button><button data-a="liberar" data-c="'+esc(l.codigo)+'">Liberar celulares</button>'+(l.ativo?'<button data-a="desativar" data-c="'+esc(l.codigo)+'">Desativar</button>':'')+'</td></tr>').join("")}catch(e){$("m0").textContent=e.message;$("m0").className="msg erro"}}
+$("lista").innerHTML=j.licencas.map(l=>'<tr><td class="codigo">'+esc(l.codigo)+'</td><td>'+esc(l.nomePlano)+'</td><td>'+esc(l.email)+'<br><small>'+esc(l.origem)+' · '+esc(l.pedido)+'</small></td><td>'+(l.ativo?'ativa':'<span class="erro">desativada</span>')+'<br><small>expira: '+data(l.expira)+' · atualiza até '+data(l.atualizacoesAte)+'</small>'+(l.motivo?'<br><small>'+esc(l.motivo)+'</small>':'')+'</td><td>'+l.aparelhos.length+'</td><td><button data-a="reenviar" data-c="'+esc(l.codigo)+'">Mandar de novo</button><button data-a="liberar" data-c="'+esc(l.codigo)+'">Liberar celulares</button>'+(l.ativo?'<button data-a="desativar" data-c="'+esc(l.codigo)+'">Desativar</button>':'')+'</td></tr>').join("")}catch(e){$("m0").textContent=e.message;$("m0").className="msg erro"}}
 let zap="";
-function resultado(l){zap=l.whatsapp||"";$("m1").className="msg";$("m1").innerHTML='Código: <span class="codigo">'+esc(l.codigo)+'</span><br>'+(l.emailEnviado?'✅ Chave e link de download enviados para '+esc(l.email):'<span class="erro">⚠️ O e-mail não saiu: '+esc(l.erroEmail||"")+'</span>')+'<br><button class="btn sec" id="zap" style="margin-top:8px;padding:8px 14px;font-size:14px">Copiar mensagem para o WhatsApp</button>';$("zap").onclick=async()=>{try{await navigator.clipboard.writeText(zap);$("zap").textContent="Copiado ✅"}catch(e){prompt("Copie:",zap)}}}
-$("lista").onclick=async e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.a==="desativar"&&!confirm("Desativar esta licença?"))return;try{const r=await api("POST","/api/admin/licencas/"+b.dataset.c+"/"+b.dataset.a);if(b.dataset.a==="reenviar"){resultado(r);scrollTo(0,0)}carregar()}catch(x){alert(x.message)}};
-$("criar").onclick=async()=>{try{const l=await api("POST","/api/admin/licencas",{plano:$("plano").value,email:$("email").value,meses:Number($("meses").value)||1});
-resultado(l);carregar()}catch(e){$("m1").textContent=e.message;$("m1").className="msg erro"}};
+function numeroDe(l){const m=/^whatsapp:(\d+)$/.exec(l.email||"");if(!m)return"";const n=m[1];return n.startsWith("55")?n:"55"+n}
+function resultado(l,abrir){zap=l.whatsapp||"";const n=numeroDe(l);const url="https://wa.me/"+n+"?text="+encodeURIComponent(zap);
+$("m1").className="msg";$("m1").innerHTML='Chave: <span class="codigo">'+esc(l.codigo)+'</span>'+(l.emailEnviado?'<br>✅ Também foi por e-mail':'')+'<br><a class="btn" id="abrirzap" style="margin-top:8px;padding:10px 16px;font-size:15px" target="_blank" href="'+esc(url)+'">Mandar no WhatsApp'+(n?'':' (escolher contato)')+'</a> <button class="btn sec" id="zap" style="margin-top:8px;padding:8px 14px;font-size:14px">Copiar mensagem</button>';
+$("zap").onclick=async()=>{try{await navigator.clipboard.writeText(zap);$("zap").textContent="Copiado ✅"}catch(e){prompt("Copie:",zap)}};if(abrir)window.open(url,"_blank")}
+$("lista").onclick=async e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.a==="desativar"&&!confirm("Desativar esta licença?"))return;try{const r=await api("POST","/api/admin/licencas/"+b.dataset.c+"/"+b.dataset.a);if(b.dataset.a==="reenviar"){resultado(r,false);scrollTo(0,0)}carregar()}catch(x){alert(x.message)}};
+$("criar").onclick=async()=>{try{const l=await api("POST","/api/admin/licencas",{plano:$("plano").value,whatsapp:$("zapcli").value,meses:Number($("meses").value)||1});
+resultado(l,true);carregar()}catch(e){$("m1").textContent=e.message;$("m1").className="msg erro"}};
 $("atualizar").onclick=carregar;if($("tok").value)carregar();
 </script></body></html>`;
 }

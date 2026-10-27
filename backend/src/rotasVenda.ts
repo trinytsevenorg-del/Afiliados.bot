@@ -152,17 +152,25 @@ export function registrarVenda(app: FastifyInstance, cfg: Config, licencas: Lice
   app.post("/api/admin/licencas", async (req) => {
     const lic = admin(req);
     const b = z
-      .object({ plano: z.enum(["essencial", "pro", "premium"]), email: z.email(), pedido: z.string().max(100).nullish(), meses: z.number().int().min(1).max(36).nullish() })
+      .object({
+        plano: z.enum(["essencial", "pro", "premium"]),
+        // Venda pelo WhatsApp: basta o número; o e-mail é opcional.
+        whatsapp: z.string().max(30).nullish(),
+        email: z.union([z.email(), z.literal("")]).nullish(),
+        pedido: z.string().max(100).nullish(),
+        meses: z.number().int().min(1).max(36).nullish(),
+      })
       .parse(req.body);
     const pagoAte = b.plano === "premium" ? Date.now() + (b.meses ?? 1) * 31 * 86_400_000 : null;
-    const l = await lic.criar({ plano: b.plano, email: b.email, pedido: b.pedido, origem: "manual", pagoAte });
+    const numero = (b.whatsapp ?? "").replace(/\D/g, "");
+    const l = await lic.criar({ plano: b.plano, email: b.email || (numero ? `whatsapp:${numero}` : ""), pedido: b.pedido ?? (numero ? `whatsapp-${numero}-${Date.now().toString(36)}` : null), origem: "manual", pagoAte });
     return { ...resumo(l), ...(await mandar(l)) };
   });
 
   /** Manda a chave por e-mail. Se não der, o painel mostra a mensagem pronta para o WhatsApp. */
   const mandar = async (l: NonNullable<Awaited<ReturnType<Licencas["porCodigo"]>>>) => {
     const whatsapp = textoLicenca(l, site, suporte).texto;
-    if (!email.configurado) return { emailEnviado: false, erroEmail: "E-mail não configurado (BREVO_API_KEY e EMAIL_REMETENTE)", whatsapp };
+    if (!email.configurado || !l.email.includes("@")) return { emailEnviado: false, whatsapp };
     try {
       await email.enviarLicenca(l);
       return { emailEnviado: true, whatsapp };
